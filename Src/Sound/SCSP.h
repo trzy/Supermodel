@@ -80,7 +80,6 @@ UINT32 SCSP_Slave_r32(UINT32 addr);
 void SCSP_SaveState(CBlockFile *StateFile);
 void SCSP_LoadState(CBlockFile *StateFile);
 void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRearBufferPtr, float* rightRearBufferPtr, int bufferLength);
-void SCSP_Deinit(void);
 
 
 #endif	// INCLUDED_SCSP_H

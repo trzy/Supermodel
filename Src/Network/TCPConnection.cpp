@@ -109,7 +109,7 @@ void CTCPConnection::PingIfDue(uint64_t intervalMicroseconds)
 // the remaining messages, then stops.
 void CTCPConnection::SendThreadFunction(void)
 {
-  CThread::SetCurrentThreadName("TCPConnectionSend");
+  Thread::SetCurrentName("TCPConnectionSend");
   TCPsocket socket = static_cast<TCPsocket>(m_socket);
   while (true)
   {

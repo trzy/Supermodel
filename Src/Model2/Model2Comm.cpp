@@ -34,6 +34,7 @@
 #include "OSD/Logger.h"
 #include "OSD/Thread.h"
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 
 CModel2Comm::CModel2Comm()
@@ -62,7 +63,7 @@ void CModel2Comm::Init(std::shared_ptr<CNetServer> server, const std::string &ad
 // As CSimNetBoard: the output connection, then the previous machine's
 void CModel2Comm::ConnectProc()
 {
-  CThread::SetCurrentThreadName("Model2CommConnect");
+  Thread::SetCurrentName("Model2CommConnect");
   while (!m_link->Connect())
   {
     if (m_quit)
@@ -72,7 +73,7 @@ void CModel2Comm::ConnectProc()
   {
     if (m_quit)
       return;
-    CThread::Sleep(1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
   InfoLog("Model 2 communication board: connected.");
   m_connected = true;

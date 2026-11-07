@@ -22,41 +22,31 @@
 /*
  * Test_Thread.cpp
  *
- * Tests for the threading primitives in Thread.h, including the way CModel3
- * and CPro1000 use them. Not part of the emulator. To build and run on a UNIX
- * or macOS system, from the top directory:
+ * Tests for Thread.h, and for the way CModel3 and CPro1000 synchronize their
+ * threads. Not part of the emulator. To build and run on a UNIX or macOS system,
+ * from the top directory:
  *
- *   c++ -std=c++17 -O2 -pthread -ISrc -ISrc/OSD/SDL Src/OSD/Test_Thread.cpp Src/OSD/Thread.cpp -o Test_Thread && ./Test_Thread
+ *   c++ -std=c++17 -O2 -pthread -ISrc Src/OSD/Test_Thread.cpp Src/OSD/Thread.cpp -o Test_Thread && ./Test_Thread
  *
- * Adding -fsanitize=thread (or address,undefined) checks the primitives too.
- * The program exits with 0 if all tests pass. A test that does not finish in
- * time is reported as a hang.
+ * Adding -fsanitize=thread (or address,undefined) checks the patterns too. The
+ * program exits with 0 if all tests pass. A test that does not finish in time is
+ * reported as a hang.
  */
 
 #include "OSD/Thread.h"
-#include "Supermodel.h"
 
 #include <atomic>
 #include <chrono>
-#include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <thread>
+#include <memory>
 #include <vector>
 
 #if !defined(_WIN32)
 #include <pthread.h>
 #include <signal.h>
-#include <unistd.h>
 #endif
-
-// Thread.cpp reports runaway threads through this
-static std::atomic<int> s_errorLogCalls(0);
-Result ErrorLog(const char *, ...)
-{
-  s_errorLogCalls++;
-  return Result::FAIL;
-}
 
 static int s_failures = 0;
 static std::atomic<const char *> s_currentTest(nullptr);
@@ -65,6 +55,11 @@ static std::atomic<int64_t> s_deadline(0);
 static int64_t NowSeconds()
 {
   return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+static void SleepMs(int ms)
+{
+  std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
 static void Check(const char *what, bool ok)
@@ -90,581 +85,491 @@ static void Test(const char *name, void (*test)(), int timeoutSeconds = 60)
 }
 
 /******************************************************************************
- Threads
+ Starting threads
 ******************************************************************************/
 
-static int ReturnParam(void *param)
+static void TestStartRunsBody()
 {
-  return *(int *) param;
-}
-
-static void TestThreadStatus()
-{
-  int value = 1234;
-  CThread *thread = CThread::CreateThread("Status", ReturnParam, &value);
-  Check("thread created", thread != nullptr);
-  Check("name is kept", thread->GetName() == "Status");
-  Check("Wait() returns the thread's result", thread->Wait() == 1234);
-  Check("second Wait() returns -1", thread->Wait() == -1);
-  delete thread;
+  int value = 0;
+  std::thread thread = Thread::Start("Body", [&] { value = 1234; });
+  Check("thread is joinable", thread.joinable());
+  thread.join();
+  Check("the body ran", value == 1234);
 }
 
 static void TestManyThreads()
 {
-  std::vector<CThread *> threads;
-  std::vector<int> values(64);
+  std::vector<int> values(64, -1);
+  std::vector<std::thread> threads;
   for (size_t i = 0; i < values.size(); i++)
-  {
-    values[i] = int(i);
-    threads.push_back(CThread::CreateThread("Many", ReturnParam, &values[i]));
-    Check("thread created", threads.back() != nullptr);
-  }
-  for (size_t i = 0; i < threads.size(); i++)
-  {
-    Check("each thread gets its own parameter", threads[i]->Wait() == int(i));
-    delete threads[i];
-  }
-}
-
-static int WaitForFlag(void *param)
-{
-  auto *flag = (std::atomic<bool> *) param;
-  while (!flag->load())
-    CThread::Sleep(1);
-  return 0;
-}
-
-static void TestRunawayThread()
-{
-  // Deleting a thread that was not waited on reports an error and must not
-  // end the program. The thread keeps running and must be able to finish.
-  static std::atomic<bool> flag(false);
-  int errorsBefore = s_errorLogCalls;
-  CThread *thread = CThread::CreateThread("Runaway", WaitForFlag, &flag);
-  Check("thread created", thread != nullptr);
-  delete thread;
-  Check("an error is logged", s_errorLogCalls == errorsBefore + 1);
-  flag = true;
-  CThread::Sleep(50);
-}
-
-static void TestSleepAndTicks()
-{
-  UINT32 start = CThread::GetTicks();
-  CThread::Sleep(100);
-  UINT32 elapsed = CThread::GetTicks() - start;
-  Check("Sleep(100) takes at least about 100 ms", elapsed >= 99);
-  Check("Sleep(100) doesn't take far longer", elapsed < 2000);
-  UINT32 last = CThread::GetTicks();
-  bool monotonic = true;
-  for (int i = 0; i < 100000; i++)
-  {
-    UINT32 now = CThread::GetTicks();
-    monotonic = monotonic && now >= last;
-    last = now;
-  }
-  Check("GetTicks() never goes backward", monotonic);
+    threads.push_back(Thread::Start("Many", [&values, i] { values[i] = int(i); }));
+  for (std::thread &thread : threads)
+    thread.join();
+  for (size_t i = 0; i < values.size(); i++)
+    Check("each thread ran its own body", values[i] == int(i));
 }
 
 #if !defined(_WIN32)
-static std::atomic<int> s_blockedSignals(0);
-
-static int CountBlockedSignals(void *)
-{
-  sigset_t set;
-  pthread_sigmask(SIG_BLOCK, nullptr, &set);
-  int blocked = 0;
-  for (int sig : { SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGWINCH, SIGVTALRM, SIGPROF })
-    blocked += sigismember(&set, sig) == 1 ? 1 : 0;
-  s_blockedSignals = blocked;
-  return 0;
-}
-
 static void TestSignalsBlocked()
 {
-  CThread *thread = CThread::CreateThread("Signals", CountBlockedSignals, nullptr);
-  thread->Wait();
-  delete thread;
-  Check("new threads leave asynchronous signals to the main thread", s_blockedSignals == 10);
+  int blocked = 0;
+  std::thread thread = Thread::Start("Signals", [&]
+  {
+    sigset_t set;
+    pthread_sigmask(SIG_BLOCK, nullptr, &set);
+    for (int sig : { SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGWINCH, SIGVTALRM, SIGPROF })
+      blocked += sigismember(&set, sig) == 1 ? 1 : 0;
+  });
+  thread.join();
+  Check("started threads leave asynchronous signals to the main thread", blocked == 10);
   sigset_t set;
   pthread_sigmask(SIG_BLOCK, nullptr, &set);
   Check("the creating thread's signals are unchanged", sigismember(&set, SIGINT) == 0);
 }
 
-static char s_threadName[64];
-
-static int ReadOwnName(void *)
+static std::string ReadOwnName()
 {
-  pthread_getname_np(pthread_self(), s_threadName, sizeof(s_threadName));
-  return 0;
+  char name[64] = {};
+  pthread_getname_np(pthread_self(), name, sizeof(name));
+  return name;
 }
 
-static void TestThreadNaming()
+static void TestNaming()
 {
-  CThread *thread = CThread::CreateThread("SoundBoard", ReadOwnName, nullptr);
-  thread->Wait();
-  delete thread;
-  Check("the system sees the thread's name", std::string(s_threadName) == "SoundBoard");
+  std::string fromStart;
+  std::thread started = Thread::Start("SoundBoard", [&] { fromStart = ReadOwnName(); });
+  started.join();
+  Check("Start() names the thread", fromStart == "SoundBoard");
+
+  std::string fromPlain;
+  std::thread plain([&]
+  {
+    Thread::SetCurrentName("NetServer");
+    fromPlain = ReadOwnName();
+  });
+  plain.join();
+  Check("SetCurrentName() names a plain std::thread", fromPlain == "NetServer");
+
+  std::string longName;
+  std::thread trimmed([&]
+  {
+    Thread::SetCurrentName("SimNetBoardConnect");
+    longName = ReadOwnName();
+  });
+  trimmed.join();
+#if defined(__linux__)
+  Check("a long name is cut to fit on Linux", longName == "SimNetBoardConn");
+#else
+  Check("a long name is kept", longName == "SimNetBoardConnect");
+#endif
 }
 #endif
-
-/******************************************************************************
- Mutexes
-******************************************************************************/
-
-struct Counter
-{
-  CMutex *mutex;
-  int value;
-  int perThread;
-};
-
-static int Increment(void *param)
-{
-  Counter *counter = (Counter *) param;
-  for (int i = 0; i < counter->perThread; i++)
-  {
-    if (!counter->mutex->Lock())
-      return 1;
-    counter->value++;
-    if (!counter->mutex->Unlock())
-      return 1;
-  }
-  return 0;
-}
-
-static void TestMutualExclusion()
-{
-  Counter counter { CThread::CreateMutex(), 0, 200000 };
-  std::vector<CThread *> threads;
-  for (int i = 0; i < 8; i++)
-    threads.push_back(CThread::CreateThread("Lock", Increment, &counter));
-  for (CThread *thread : threads)
-  {
-    Check("no lock error", thread->Wait() == 0);
-    delete thread;
-  }
-  Check("no increment was lost", counter.value == 8 * counter.perThread);
-  delete counter.mutex;
-}
-
-static int TryToEnter(void *param)
-{
-  Counter *counter = (Counter *) param;
-  counter->mutex->Lock();
-  counter->value = 1;
-  counter->mutex->Unlock();
-  return 0;
-}
-
-static void TestRecursiveLocking()
-{
-  // Previous implementations allowed this and CMutex users may rely on it
-  Counter counter { CThread::CreateMutex(), 0, 0 };
-  Check("first lock", counter.mutex->Lock());
-  Check("second lock by the owner", counter.mutex->Lock());
-  CThread *other = CThread::CreateThread("Other", TryToEnter, &counter);
-  CThread::Sleep(50);
-  Check("another thread can't enter while held twice", counter.value == 0);
-  Check("first unlock", counter.mutex->Unlock());
-  CThread::Sleep(50);
-  Check("another thread can't enter while still held once", counter.value == 0);
-  Check("second unlock", counter.mutex->Unlock());
-  other->Wait();
-  Check("another thread enters after the last unlock", counter.value == 1);
-  delete other;
-  delete counter.mutex;
-}
 
 /******************************************************************************
  Semaphores
 ******************************************************************************/
 
-static void TestSemaphoreCounting()
+static void TestSemaphoreCounts()
 {
-  CSemaphore *sem = CThread::CreateSemaphore(3);
-  Check("initial value", sem->GetValue() == 3);
-  Check("wait", sem->Wait());
-  Check("value after wait", sem->GetValue() == 2);
-  Check("post", sem->Post());
-  Check("post", sem->Post());
-  Check("value after posts", sem->GetValue() == 4);
+  // Posts made while nobody waits are kept. If not, each Wait() would hang.
+  Thread::Semaphore semaphore;
   for (int i = 0; i < 4; i++)
-    Check("wait without blocking", sem->Wait());
-  Check("value at the end", sem->GetValue() == 0);
-  delete sem;
+    semaphore.Post();
+  for (int i = 0; i < 4; i++)
+    semaphore.Wait();
 }
 
-struct SemaphoreWork
+static void TestSemaphoreBlocks()
 {
-  CSemaphore *items;
-  std::atomic<int> taken;
-  int total;
-};
-
-static int Consume(void *param)
-{
-  SemaphoreWork *work = (SemaphoreWork *) param;
-  for (;;)
+  Thread::Semaphore semaphore;
+  std::atomic<bool> woke(false);
+  std::thread waiter = Thread::Start("Waiter", [&]
   {
-    if (!work->items->Wait())
-      return 1;
-    if (work->taken.fetch_add(1) >= work->total)
-      return 0;   // the extra posts at the end tell the consumers to stop
-  }
+    semaphore.Wait();
+    woke = true;
+  });
+  SleepMs(100);
+  Check("Wait() blocks until a post", !woke);
+  semaphore.Post();
+  waiter.join();
+  Check("Post() wakes the waiter", woke);
 }
 
-static void TestSemaphoreBlocksAndWakes()
+static void TestEachPostConsumedOnce()
 {
-  SemaphoreWork work;
-  work.items = CThread::CreateSemaphore(0);
-  work.taken = 0;
-  work.total = 500000;
-  std::vector<CThread *> threads;
+  Thread::Semaphore items;
+  std::atomic<int> taken(0);
+  const int total = 500000;
   const int consumers = 4;
+  std::vector<std::thread> threads;
   for (int i = 0; i < consumers; i++)
-    threads.push_back(CThread::CreateThread("Consumer", Consume, &work));
-  for (int i = 0; i < work.total + consumers; i++)
-    Check("post", work.items->Post());
-  for (CThread *thread : threads)
   {
-    Check("no wait error", thread->Wait() == 0);
-    delete thread;
+    threads.push_back(Thread::Start("Consumer", [&]
+    {
+      for (;;)
+      {
+        items.Wait();
+        if (taken.fetch_add(1) >= total)
+          return;   // the extra posts at the end tell the consumers to stop
+      }
+    }));
   }
-  Check("every post was consumed exactly once", work.taken == work.total + consumers);
-  delete work.items;
-}
-
-static int WaitThenExit(void *param)
-{
-  return ((CSemaphore *) param)->Wait() ? 0 : 1;
+  for (int i = 0; i < total + consumers; i++)
+    items.Post();
+  for (std::thread &thread : threads)
+    thread.join();
+  Check("every post was consumed exactly once", taken == total + consumers);
 }
 
 static void TestDestroySemaphoreAfterWake()
 {
-  // As CModel3::StopThreads() does: post, wait for the thread, destroy
+  // A waiter can return while Post() is finishing. Destroying the semaphore
+  // right after must be safe, which the sanitizers would catch if it isn't.
   for (int i = 0; i < 20000; i++)
   {
-    CSemaphore *sem = CThread::CreateSemaphore(0);
-    CThread *thread = CThread::CreateThread("Stop", WaitThenExit, sem);
-    sem->Post();
-    Check("thread woke up", thread->Wait() == 0);
-    delete thread;
-    delete sem;
+    std::unique_ptr<Thread::Semaphore> semaphore(new Thread::Semaphore());
+    std::thread thread([&] { semaphore->Wait(); });
+    semaphore->Post();
+    thread.join();
   }
-}
-
-/******************************************************************************
- Condition variables
-******************************************************************************/
-
-struct Waiters
-{
-  CMutex *mutex;
-  CCondVar *cond;
-  int generation;
-  int woken;
-};
-
-static int WaitForGeneration(void *param)
-{
-  Waiters *w = (Waiters *) param;
-  w->mutex->Lock();
-  while (w->generation == 0)
-    if (!w->cond->Wait(w->mutex))
-      return 1;
-  w->woken++;
-  w->mutex->Unlock();
-  return 0;
-}
-
-static void TestSignalWakesOneAndBroadcastWakesAll()
-{
-  Waiters w { CThread::CreateMutex(), CThread::CreateCondVar(), 0, 0 };
-  std::vector<CThread *> threads;
-  for (int i = 0; i < 8; i++)
-    threads.push_back(CThread::CreateThread("Waiter", WaitForGeneration, &w));
-  CThread::Sleep(100);    // let them all wait
-
-  // Waiting must release the mutex, or this would block forever
-  Check("mutex is free while waiting", w.mutex->Lock());
-  Check("nobody woke up yet", w.woken == 0);
-  w.mutex->Unlock();
-
-  w.mutex->Lock();
-  w.generation = 1;
-  w.mutex->Unlock();
-  Check("signal", w.cond->Signal());
-  CThread::Sleep(100);
-  w.mutex->Lock();
-  Check("signal wakes at least one waiter", w.woken >= 1);
-  w.mutex->Unlock();
-
-  Check("signal all", w.cond->SignalAll());
-  for (CThread *thread : threads)
-  {
-    Check("no wait error", thread->Wait() == 0);
-    delete thread;
-  }
-  Check("signal all wakes every waiter", w.woken == 8);
-  delete w.cond;
-  delete w.mutex;
-}
-
-static void TestSignalWithoutWaiters()
-{
-  CCondVar *cond = CThread::CreateCondVar();
-  Check("signal with nobody waiting", cond->Signal());
-  Check("signal all with nobody waiting", cond->SignalAll());
-  delete cond;
 }
 
 /******************************************************************************
  The frame loop of CModel3 and CPro1000
 ******************************************************************************/
 
-// The main thread runs frames, each board thread waits on its own semaphore
-// for the next frame, works, flags that it is done and signals the main thread.
-// Pausing waits for the boards to stop at the top of their loops. Stopping
-// tells them to exit, wakes them and waits for them.
-struct FrameLoop
+// The main thread runs frames. Each board thread waits on its own semaphore for
+// the next frame, works, flags that it is done and signals the main thread.
+// Pausing waits for the boards to finish their work. Stopping also tells them to
+// exit, wakes them and joins them. These use the same order of operations as the
+// emulator, so a mistake made there can be tried here with the sanitizers.
+class FrameLoop
 {
+public:
   static const int NUM_BOARDS = 4;
-  CThread *threads[NUM_BOARDS];
-  CSemaphore *sync[NUM_BOARDS];
-  CMutex *notifyLock;
-  CCondVar *notifySync;
-  bool done[NUM_BOARDS];
-  bool running[NUM_BOARDS];
-  bool pause;
-  bool stop;
-  uint64_t work[NUM_BOARDS];
-  uint64_t frameWork;
-  int board[NUM_BOARDS];
-  bool jitter;
+
+  explicit FrameLoop(bool jitter)
+    : m_jitter(jitter)
+  {
+    for (int board = 0; board < NUM_BOARDS; board++)
+      m_threads[board] = Thread::Start("Board", [this, board] { RunBoard(board); });
+  }
+
+  void RunFrame(uint64_t frame)
+  {
+    {
+      std::lock_guard<std::mutex> lock(m_notifyLock);
+      m_frameWork = frame;
+    }
+    for (Thread::Semaphore &sync : m_sync)
+      sync.Post();
+    std::unique_lock<std::mutex> lock(m_notifyLock);
+    for (bool &done : m_done)
+    {
+      while (!done)
+        m_notifySync.wait(lock);
+    }
+    for (bool &done : m_done)
+      done = false;
+  }
+
+  void Pause()
+  {
+    std::unique_lock<std::mutex> lock(m_notifyLock);
+    m_pause = true;
+    while (AnyRunning())
+      m_notifySync.wait(lock);
+  }
+
+  void Resume()
+  {
+    std::lock_guard<std::mutex> lock(m_notifyLock);
+    m_pause = false;
+  }
+
+  bool IsAnyRunning()
+  {
+    std::lock_guard<std::mutex> lock(m_notifyLock);
+    return AnyRunning();
+  }
+
+  void Stop()
+  {
+    Pause();
+    {
+      std::lock_guard<std::mutex> lock(m_notifyLock);
+      m_stop = true;
+    }
+    for (int board = 0; board < NUM_BOARDS; board++)
+    {
+      m_sync[board].Post();
+      m_threads[board].join();
+    }
+  }
+
+  uint64_t Work(int board) const
+  {
+    return m_work[board];
+  }
+
+private:
+  bool AnyRunning() const
+  {
+    for (bool running : m_running)
+    {
+      if (running)
+        return true;
+    }
+    return false;
+  }
+
+  void RunBoard(int board)
+  {
+    unsigned seed = unsigned(board) * 2654435761u + 1;
+    for (;;)
+    {
+      bool wait = true;
+      bool exit = false;
+      uint64_t frameWork = 0;
+      while (wait && !exit)
+      {
+        m_sync[board].Wait();
+        std::lock_guard<std::mutex> lock(m_notifyLock);
+        if (m_stop)
+          exit = true;
+        else if (!m_pause)
+        {
+          wait = false;
+          m_running[board] = true;
+          frameWork = m_frameWork;
+        }
+      }
+      if (exit)
+        return;
+
+      // Not protected: only the main thread reads this, after this board is done
+      m_work[board] += frameWork;
+      if (m_jitter)
+      {
+        seed = seed * 1103515245u + 12345u;
+        if ((seed >> 16) % 64 == 0)
+          std::this_thread::yield();
+      }
+
+      std::lock_guard<std::mutex> lock(m_notifyLock);
+      m_running[board] = false;
+      m_done[board] = true;
+      m_notifySync.notify_all();
+    }
+  }
+
+  const bool m_jitter;
+  std::thread m_threads[NUM_BOARDS];
+  Thread::Semaphore m_sync[NUM_BOARDS];
+  std::mutex m_notifyLock;
+  std::condition_variable m_notifySync;
+  bool m_done[NUM_BOARDS] = {};
+  bool m_running[NUM_BOARDS] = {};
+  bool m_pause = false;
+  bool m_stop = false;
+  uint64_t m_frameWork = 0;
+  uint64_t m_work[NUM_BOARDS] = {};
 };
 
-static FrameLoop s_loop;
-
-static int BoardThread(void *param)
+static void RunFrames(bool jitter, uint64_t frames)
 {
-  int board = *(int *) param;
-  FrameLoop &loop = s_loop;
-  unsigned seed = unsigned(board) * 2654435761u + 1;
-  for (;;)
-  {
-    if (!loop.sync[board]->Wait())
-      return 1;
-
-    if (!loop.notifyLock->Lock())
-      return 1;
-    while (loop.pause && !loop.stop)
-    {
-      loop.running[board] = false;
-      loop.notifySync->SignalAll();
-      if (!loop.notifySync->Wait(loop.notifyLock))
-        return 1;
-    }
-    if (loop.stop)
-    {
-      loop.running[board] = false;
-      loop.notifySync->SignalAll();
-      loop.notifyLock->Unlock();
-      return 0;
-    }
-    loop.running[board] = true;
-    uint64_t frameWork = loop.frameWork;
-    if (!loop.notifyLock->Unlock())
-      return 1;
-
-    // Not protected: only the main thread reads this, after this board is done
-    loop.work[board] += frameWork;
-    if (loop.jitter)
-    {
-      seed = seed * 1103515245u + 12345u;
-      if ((seed >> 16) % 64 == 0)
-        std::this_thread::yield();
-    }
-
-    if (!loop.notifyLock->Lock())
-      return 1;
-    loop.done[board] = true;
-    loop.running[board] = false;
-    if (!loop.notifySync->SignalAll())
-      return 1;
-    if (!loop.notifyLock->Unlock())
-      return 1;
-  }
-}
-
-static bool StartLoop(bool jitter)
-{
-  s_loop.notifyLock = CThread::CreateMutex();
-  s_loop.notifySync = CThread::CreateCondVar();
-  s_loop.pause = false;
-  s_loop.stop = false;
-  s_loop.frameWork = 0;
-  s_loop.jitter = jitter;
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-  {
-    s_loop.board[i] = i;
-    s_loop.done[i] = false;
-    s_loop.running[i] = false;
-    s_loop.work[i] = 0;
-    s_loop.sync[i] = CThread::CreateSemaphore(0);
-    s_loop.threads[i] = CThread::CreateThread("Board", BoardThread, &s_loop.board[i]);
-    if (s_loop.threads[i] == nullptr)
-      return false;
-  }
-  return true;
-}
-
-static bool RunLoopFrame(uint64_t frame)
-{
-  s_loop.notifyLock->Lock();
-  s_loop.frameWork = frame;
-  s_loop.notifyLock->Unlock();
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-    if (!s_loop.sync[i]->Post())
-      return false;
-  if (!s_loop.notifyLock->Lock())
-    return false;
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-  {
-    while (!s_loop.done[i])
-      if (!s_loop.notifySync->Wait(s_loop.notifyLock))
-        return false;
-  }
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-    s_loop.done[i] = false;
-  return s_loop.notifyLock->Unlock();
-}
-
-static void PauseLoop()
-{
-  s_loop.notifyLock->Lock();
-  s_loop.pause = true;
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-    while (s_loop.running[i])
-      s_loop.notifySync->Wait(s_loop.notifyLock);
-  s_loop.notifyLock->Unlock();
-}
-
-static void ResumeLoop()
-{
-  s_loop.notifyLock->Lock();
-  s_loop.pause = false;
-  s_loop.notifySync->SignalAll();
-  s_loop.notifyLock->Unlock();
-}
-
-static void StopLoop()
-{
-  s_loop.notifyLock->Lock();
-  s_loop.stop = true;
-  s_loop.notifySync->SignalAll();
-  s_loop.notifyLock->Unlock();
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-  {
-    s_loop.sync[i]->Post();
-    Check("board thread exits cleanly", s_loop.threads[i]->Wait() == 0);
-    delete s_loop.threads[i];
-    delete s_loop.sync[i];
-  }
-  delete s_loop.notifySync;
-  delete s_loop.notifyLock;
-}
-
-static void TestFrameLoop(bool jitter, uint64_t frames)
-{
-  Check("threads started", StartLoop(jitter));
+  FrameLoop loop(jitter);
   uint64_t expected = 0;
-  bool ok = true;
   for (uint64_t frame = 1; frame <= frames; frame++)
   {
-    ok = ok && RunLoopFrame(frame);
+    loop.RunFrame(frame);
     expected += frame;
   }
-  Check("no thread error during frames", ok);
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-    Check("every board did every frame exactly once", s_loop.work[i] == expected);
-  StopLoop();
+  for (int board = 0; board < FrameLoop::NUM_BOARDS; board++)
+    Check("every board did every frame exactly once", loop.Work(board) == expected);
+  loop.Stop();
 }
 
 static void TestFrameLoopFast()
 {
-  TestFrameLoop(false, 200000);
+  RunFrames(false, 200000);
 }
 
 static void TestFrameLoopJitter()
 {
-  TestFrameLoop(true, 100000);
+  RunFrames(true, 100000);
 }
 
 static void TestPauseAndResume()
 {
   // Pausing between frames, as a save state does
-  Check("threads started", StartLoop(true));
+  FrameLoop loop(true);
   uint64_t expected = 0;
-  bool ok = true;
+  bool anyRunningWhilePaused = false;
   for (uint64_t frame = 1; frame <= 20000; frame++)
   {
-    ok = ok && RunLoopFrame(frame);
+    loop.RunFrame(frame);
     expected += frame;
     if (frame % 7 == 0)
     {
-      PauseLoop();
-      bool anyRunning = false;
-      s_loop.notifyLock->Lock();
-      for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-        anyRunning = anyRunning || s_loop.running[i];
-      s_loop.notifyLock->Unlock();
-      ok = ok && !anyRunning;
-      ResumeLoop();
+      loop.Pause();
+      anyRunningWhilePaused = anyRunningWhilePaused || loop.IsAnyRunning();
+      loop.Resume();
     }
   }
-  Check("no thread error, and nothing runs while paused", ok);
-  for (int i = 0; i < FrameLoop::NUM_BOARDS; i++)
-    Check("every board did every frame exactly once", s_loop.work[i] == expected);
-  StopLoop();
+  Check("nothing runs while paused", !anyRunningWhilePaused);
+  for (int board = 0; board < FrameLoop::NUM_BOARDS; board++)
+    Check("every board did every frame exactly once", loop.Work(board) == expected);
+  loop.Stop();
 }
 
 static void TestStartAndStopRepeatedly()
 {
-  // Starting and stopping the threads, as switching games or resetting does
   for (int cycle = 0; cycle < 2000; cycle++)
   {
-    Check("threads started", StartLoop(false));
+    FrameLoop loop(false);
     for (uint64_t frame = 1; frame <= uint64_t(cycle % 5); frame++)
-      Check("frame ran", RunLoopFrame(frame));
-    StopLoop();
+      loop.RunFrame(frame);
+    loop.Stop();
   }
 }
 
-// SDL's audio thread calls CModel3::AudioCallback, which wakes the sound board
-// thread from a thread that CThread did not create
-static std::atomic<int> s_foreignDone(0);
+/******************************************************************************
+ The unsynchronized sound board of CModel3
+******************************************************************************/
 
-static void TestForeignThreadSignals()
+// SDL's audio thread wakes the sound board thread, taking the sound board lock
+// and then the main lock, while the main thread pauses and resumes it holding
+// only the main lock. The sound board thread takes them in the same order.
+class SoundBoardLoop
 {
-  Waiters w { CThread::CreateMutex(), CThread::CreateCondVar(), 0, 0 };
-  CThread *waiter = CThread::CreateThread("Waiter", WaitForGeneration, &w);
-  std::thread foreign([&]
+public:
+  SoundBoardLoop()
   {
-    CThread::Sleep(50);
-    w.mutex->Lock();
-    w.generation = 1;
-    w.cond->Signal();
-    w.mutex->Unlock();
-    s_foreignDone = 1;
+    m_thread = Thread::Start("SoundBoardNoSync", [this] { Run(); });
+  }
+
+  void Wake()
+  {
+    std::lock_guard<std::mutex> sndLock(m_sndLock);
+    bool wake;
+    {
+      std::lock_guard<std::mutex> lock(m_notifyLock);
+      wake = !m_running;
+    }
+    if (wake)
+    {
+      m_wakeNotify = true;
+      m_sndSync.notify_one();
+    }
+  }
+
+  void Pause()
+  {
+    std::unique_lock<std::mutex> lock(m_notifyLock);
+    m_pause = true;
+    while (m_running)
+      m_notifySync.wait(lock);
+  }
+
+  void Resume()
+  {
+    std::lock_guard<std::mutex> lock(m_notifyLock);
+    m_pause = false;
+  }
+
+  void Stop()
+  {
+    Pause();
+    {
+      std::lock_guard<std::mutex> lock(m_notifyLock);
+      m_stop = true;
+    }
+    Wake();
+    m_thread.join();
+  }
+
+  int Bursts() const
+  {
+    return m_bursts;
+  }
+
+private:
+  void Run()
+  {
+    for (;;)
+    {
+      bool wait = true;
+      bool exit = false;
+      while (wait && !exit)
+      {
+        std::unique_lock<std::mutex> sndLock(m_sndLock);
+        while (!m_wakeNotify)
+          m_sndSync.wait(sndLock);
+        m_wakeNotify = false;
+
+        std::lock_guard<std::mutex> lock(m_notifyLock);
+        if (m_stop)
+          exit = true;
+        else if (!m_pause)
+        {
+          wait = false;
+          m_running = true;
+        }
+      }
+      if (exit)
+        return;
+
+      m_bursts++;
+      std::lock_guard<std::mutex> lock(m_notifyLock);
+      m_running = false;
+      m_notifySync.notify_all();
+    }
+  }
+
+  std::thread m_thread;
+  std::mutex m_sndLock;
+  std::condition_variable m_sndSync;
+  std::mutex m_notifyLock;
+  std::condition_variable m_notifySync;
+  bool m_wakeNotify = false;
+  bool m_running = false;
+  bool m_pause = false;
+  bool m_stop = false;
+  std::atomic<int> m_bursts{0};
+};
+
+static void TestSoundBoardWakes()
+{
+  SoundBoardLoop sound;
+  std::atomic<bool> stopAudio(false);
+
+  // Started with std::thread, not Thread::Start(), as the audio thread is foreign
+  std::thread audio([&]
+  {
+    while (!stopAudio)
+      sound.Wake();
   });
-  Check("waiter woke up", waiter->Wait() == 0);
-  foreign.join();
-  Check("foreign thread finished", s_foreignDone == 1);
-  Check("waiter ran", w.woken == 1);
-  delete waiter;
-  delete w.cond;
-  delete w.mutex;
+
+  for (int i = 0; i < 20000; i++)
+  {
+    sound.Pause();
+    sound.Resume();
+  }
+  stopAudio = true;
+  audio.join();
+  sound.Stop();
+  Check("the audio thread woke the sound board", sound.Bursts() > 0);
+}
+
+static void TestStopWithoutAudio()
+{
+  // Stopping must not depend on the audio thread running
+  for (int i = 0; i < 2000; i++)
+  {
+    SoundBoardLoop sound;
+    sound.Stop();
+  }
 }
 
 /******************************************************************************
@@ -689,26 +594,22 @@ int main()
     }
   }).detach();
 
-  Test("Thread returns its status", TestThreadStatus);
+  Test("Start runs the body", TestStartRunsBody);
   Test("Many threads", TestManyThreads);
-  Test("Runaway thread", TestRunawayThread);
-  Test("Sleep and ticks", TestSleepAndTicks);
 #if !defined(_WIN32)
   Test("Asynchronous signals blocked", TestSignalsBlocked);
-  Test("Thread naming", TestThreadNaming);
+  Test("Thread naming", TestNaming);
 #endif
-  Test("Mutual exclusion", TestMutualExclusion);
-  Test("Recursive locking", TestRecursiveLocking);
-  Test("Semaphore counting", TestSemaphoreCounting);
-  Test("Semaphore blocks and wakes", TestSemaphoreBlocksAndWakes);
+  Test("Semaphore counts", TestSemaphoreCounts);
+  Test("Semaphore blocks and wakes", TestSemaphoreBlocks);
+  Test("Each post consumed once", TestEachPostConsumedOnce);
   Test("Semaphore destroyed after wake", TestDestroySemaphoreAfterWake, 180);
-  Test("Signal and broadcast", TestSignalWakesOneAndBroadcastWakesAll);
-  Test("Signal without waiters", TestSignalWithoutWaiters);
   Test("Frame loop", TestFrameLoopFast, 180);
   Test("Frame loop with jitter", TestFrameLoopJitter, 180);
   Test("Pause and resume", TestPauseAndResume, 180);
   Test("Start and stop repeatedly", TestStartAndStopRepeatedly, 180);
-  Test("Signals from a foreign thread", TestForeignThreadSignals);
+  Test("Sound board woken by a foreign thread", TestSoundBoardWakes, 180);
+  Test("Sound board stops without audio", TestStopWithoutAudio, 180);
 
   s_deadline = 0;
   printf("%s: %d failed checks\n", s_failures == 0 ? "ALL PASSED" : "FAILED", s_failures);

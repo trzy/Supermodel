@@ -98,7 +98,7 @@ bool CNetOutputs::CreateServerThread()
 {
     m_running.store(true);
     m_tcpServerThread = std::thread([this] {
-        CThread::SetCurrentThreadName("NetOutputsTCP");
+        Thread::SetCurrentName("NetOutputsTCP");
         while (m_running.load()) {
             TCPsocket clientSocket = SDLNet_TCP_Accept(m_serverSocket);
             if (clientSocket) {

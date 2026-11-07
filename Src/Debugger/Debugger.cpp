@@ -133,7 +133,6 @@ namespace Debugger
 		frameCount(0), logDebug(true), logInfo(true), logError(true)
 	{ 
 #ifdef DEBUGGER_HASTHREAD
-		m_mutex = CThread::CreateMutex();
 		m_primaryCPU = NULL;
 #endif // DEBUGGER_HASTHREAD
 	}
@@ -215,13 +214,13 @@ namespace Debugger
 #ifdef DEBUGGER_HASTHREAD
 	bool CDebugger::MakePrimary(CCPUDebug *cpu)
 	{
-		m_mutex->Lock();
+		m_mutex.lock();
 
 		bool isPrimary = m_primaryCPU == NULL || m_primaryCPU == cpu;
 		if (isPrimary)
 			m_primaryCPU = cpu;
 		
-		m_mutex->Unlock();
+		m_mutex.unlock();
 		
 		if (isPrimary)
 		{
@@ -242,7 +241,7 @@ namespace Debugger
 
 	void CDebugger::ReleasePrimary()
 	{
-		m_mutex->Lock();
+		m_mutex.lock();
 
 		m_primaryCPU = NULL;
 
@@ -254,7 +253,7 @@ namespace Debugger
 				(*it)->ClearWait();
 		}
 
-		m_mutex->Unlock();
+		m_mutex.unlock();
 	}
 #endif // DEBUGGER_HASTHREAD
 

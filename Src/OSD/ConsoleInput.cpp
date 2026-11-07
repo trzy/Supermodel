@@ -249,7 +249,7 @@ static bool StopRequested(CConsoleInput::State *state)
 
 static void ReaderThread(std::shared_ptr<CConsoleInput::State> state)
 {
-  CThread::SetCurrentThreadName("ConsoleInput");
+  Thread::SetCurrentName("ConsoleInput");
   std::string line;
   char buffer[256];
   while (!StopRequested(state.get()))

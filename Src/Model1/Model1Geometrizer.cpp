@@ -290,7 +290,7 @@ namespace Model1
   void CGeometrizer::Worker(int chip)
   {
     static const char *names[NUM_CHIPS] = { "Model1Geo5571A", "Model1Geo5571B", "Model1Geo5572A", "Model1Geo5572B" };
-    CThread::SetCurrentThreadName(names[chip]);
+    Thread::SetCurrentName(names[chip]);
     uint64_t frame = 0;
     for (;;)
     {

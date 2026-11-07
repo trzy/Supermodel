@@ -226,7 +226,7 @@ std::shared_ptr<CTCPConnection> CNetServer::Connect(const std::string &host, uin
 
 void CNetServer::ThreadFunction(void)
 {
-  CThread::SetCurrentThreadName("NetServer");
+  Thread::SetCurrentName("NetServer");
   SDLNet_SocketSet set = static_cast<SDLNet_SocketSet>(m_socketSet);
   TCPsocket listenSocket = static_cast<TCPsocket>(m_listenSocket);
 

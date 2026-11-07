@@ -141,11 +141,9 @@ private:
   void SyncGPUs(void);                          // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
 
   bool    StartThreads(void);                   // Starts all threads
-  bool    StopThreads(void);                    // Stops all threads
-  void    DeleteThreadObjects(void);            // Deletes all threads and synchronization objects
+  void    StopThreads(void);                    // Stops all threads
 
-  static int StartMainBoardThread(void *data);  // Callback to start PPC main board thread
-  int     RunMainBoardThread(void);             // Runs PPC main board thread (sync'd in step with render thread)
+  void    RunMainBoardThread(void);             // Runs PPC main board thread (sync'd in step with render thread)
 
   // Runtime configuration
   Util::Config::Node &m_config;
@@ -169,14 +167,14 @@ private:
   bool        startedThreads;       // True if threads have been created and started
   bool        pauseThreads;         // True if threads should pause
   bool        stopThreads;          // True if threads should stop
-  CThread     *ppcBrdThread;        // PPC main board thread
+  std::thread ppcBrdThread;         // PPC main board thread
   bool        ppcBrdThreadRunning;  // Flag to indicate PPC main board thread is currently processing
   bool        ppcBrdThreadDone;     // Flag to indicate PPC main board thread has finished processing
 
   // Thread synchronization objects
-  CSemaphore  *ppcBrdThreadSync;
-  CMutex      *notifyLock;
-  CCondVar    *notifySync;
+  Thread::Semaphore ppcBrdThreadSync;
+  std::mutex        notifyLock;
+  std::condition_variable notifySync;
 
   // Frame timings
   FrameTimings timings;

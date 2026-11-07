@@ -20,6 +20,7 @@
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
+#include <chrono>
 #include <thread>
 #include "Supermodel.h"
 #include "SimNetBoard.h"
@@ -106,7 +107,7 @@ void CSimNetBoard::RunFrame(void)
 		if (!m_connected && !m_connectThread.joinable())
 			m_connectThread = std::thread([this]
 			{
-				CThread::SetCurrentThreadName("SimNetBoardConnect");
+				Thread::SetCurrentName("SimNetBoardConnect");
 				ConnectProc();
 			});
 		m_status0 = 0;
@@ -551,7 +552,7 @@ void CSimNetBoard::ConnectProc(void)
 	{
 		if (m_quit)
 			return;
-		CThread::Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	printf("Successfully connected.\n");
