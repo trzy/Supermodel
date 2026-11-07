@@ -58,6 +58,7 @@
 #include "Supermodel.h"
 #include "SDLIncludes.h"
 
+#include <atomic>
 #include <cmath>
 #include <algorithm>
 
@@ -93,7 +94,7 @@ float balanceFactorFrontRight = 1.0f;
 float balanceFactorRearLeft   = 1.0f;
 float balanceFactorRearRight  = 1.0f;
 
-static bool enabled = true;         // True if sound output is enabled
+static std::atomic<bool> enabled = true; // True if sound output is enabled (written by the main thread, read by the audio callback)
 static constexpr unsigned latency = 20;       // Size of audio buffer as percentage of max buffer size (headroom only, see targetLatencyMs)
 static constexpr unsigned targetLatencyMs = 50; // Amount of audio kept queued ahead of playback; this is the output latency
 static constexpr bool underRunLoop = true;    // True if should loop back to beginning of buffer on under-run, otherwise sound is just skipped
