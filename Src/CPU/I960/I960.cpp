@@ -2462,6 +2462,7 @@ void CI960::execute_run()
 		m_IP += 4;
 
 		m_stalled = false;
+		const int icountBefore = m_icount;
 
 		if(m_stall_state.burst_mode == true)
 			execute_burst_stall_op(opcode);
@@ -2474,6 +2475,15 @@ void CI960::execute_run()
 		// Daytona USA masks its sound interrupt around its sound queue updates
 		// and relies on this: taken late, the interrupt lands inside the next
 		// update, the queue count goes wrong and the music is lost.
+		// Supermodel: a delayed device callback (CallAfterCycles)
+		if (m_delayFn)
+		{
+			if (m_delayArmed)
+				m_delayArmed = false;
+			else if ((m_delayRemaining -= icountBefore - m_icount) <= 0)
+				FlushDelayed();
+		}
+
 		if ((m_immediate_irq || IRQHeld()) && !m_stall_state.burst_mode)
 			check_immediate_irqs();
 	}
@@ -2617,6 +2627,8 @@ void CI960::Reset()
 	std::fill(std::begin(m_fp), std::end(m_fp), 0.0);
 	std::fill(std::begin(m_irq_line_state), std::end(m_irq_line_state), CLEAR_LINE);
 	m_PIP = 0;
+	m_delayFn = nullptr;
+	m_delayArmed = false;
 }
 
 int CI960::Run(int cycles)

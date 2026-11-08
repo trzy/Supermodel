@@ -792,11 +792,15 @@ void CModel2::IRQUpdate()
   m_i960.SetIRQLine(3, (m_intReq & 0xc00) != 0);
 }
 
-// MAME delays this by 80 ns (vcop2 needs it); here it takes effect at once
+// The mask takes effect at once, but the sound interrupt it may unmask is
+// raised two cycles later (MAME: 80 ns, mamedev/mame PR 14645). Virtua Cop 2
+// unmasks it at 5A570 and saves its sound queue count in the next instruction;
+// taken in between, the handler sees the old count and the byte (a sound
+// effect or a music command) is never sent.
 void CModel2::IRQEnableWrite(uint32_t data, uint32_t mask)
 {
   m_intEna = Combine32(m_intEna, data, mask);
-  SoundReady();
+  m_i960.CallAfterCycles(2, [this] { SoundReady(); });
 }
 
 // The sound interrupt is asserted if either RxRDY or TxRDY is active
@@ -2805,6 +2809,7 @@ void CModel2::Reset(void)
 
 void CModel2::SaveState(CBlockFile *SaveState)
 {
+  m_i960.FlushDelayed();   // (a sound interrupt check due within two cycles)
   SaveState->NewBlock("Model 2", __FILE__);
   WriteVector(SaveState, m_ram);
   WriteVector(SaveState, m_workRAM);

@@ -98,6 +98,12 @@ public:
 
   void SetTraceCallback(std::function<void(UINT32 ip)> cb) { m_trace = std::move(cb); }
 
+  // Calls fn once this many cycles have run after the current instruction (a
+  // device that reacts a little after a write: Model 2's sound interrupt check).
+  // FlushDelayed() calls a pending one now (before a save state).
+  void CallAfterCycles(int cycles, std::function<void()> fn) { m_delayFn = std::move(fn); m_delayRemaining = cycles; m_delayArmed = true; }
+  void FlushDelayed() { if (m_delayFn) { auto fn = std::move(m_delayFn); m_delayFn = nullptr; fn(); } }
+
   UINT32 GetIP() const  { return m_IP; }
   UINT32 GetPIP() const { return m_PIP; }
   UINT32 GetReg(unsigned n) const;
@@ -250,6 +256,9 @@ private:
   bool m_fetching = false;          // an opcode fetch through the bus (no wait states charged)
   int  m_cyclesRequested = 0;
   std::function<void(UINT32)> m_trace;
+  std::function<void()> m_delayFn;
+  int  m_delayRemaining = 0;
+  bool m_delayArmed = false;      // armed by the instruction now running: counting starts after it
 };
 
 #endif  // INCLUDED_I960_H
