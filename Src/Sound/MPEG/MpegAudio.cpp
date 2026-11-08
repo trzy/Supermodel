@@ -25,6 +25,7 @@
 #include "Util/ConfigBuilders.h"
 #include "OSD/Logger.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <map>
 #include <memory>
@@ -214,13 +215,57 @@ struct Decoder
 	short				pcm[MINIMP3_MAX_SAMPLES_PER_FRAME];
 
 	std::shared_ptr<uint8_t[]>  custom_mpeg_data;
+
+	// Frames that don't start on a byte boundary (Star Wars Arcade's music
+	// is 3 bits off): minimp3 only finds byte-aligned frames, so each one is
+	// decoded from a copy of the data shifted left by this many bits
+	int					bitShift;
+	uint8_t				aligned[16384];	// several frames: minimp3 checks that frames follow each other
 };
 
 static Decoder dec{};
 
+// Copies up to sizeof(dec.aligned) bytes from src (avail bytes readable)
+// shifted left by shift bits; returns the number of bytes copied
+static int AlignData(const uint8_t *src, int avail, int shift)
+{
+	int n = std::min<int>(avail, (int) sizeof(dec.aligned));
+	for (int i = 0; i < n; i++)
+	{
+		uint8_t next = (i + 1 < avail) ? src[i + 1] : 0;
+		dec.aligned[i] = (uint8_t) ((src[i] << shift) | (next >> (8 - shift)));
+	}
+	return n;
+}
+
+// The bit offset of the frames at the start of a track: 0 if minimp3 finds a
+// frame there as it is (always so for Model 3), otherwise the shift that
+// makes one appear (MAME's decoder searches for the sync bit by bit)
+static int FindBitShift(const uint8_t *src, int avail)
+{
+	mp3dec_t probe;		// about 11 KB of stack with pcm
+	mp3dec_frame_info_t info;
+	short pcm[MINIMP3_MAX_SAMPLES_PER_FRAME];
+	int n = std::min<int>(avail, (int) sizeof(dec.aligned));
+	if (n <= 0)
+		return 0;
+	mp3dec_init(&probe);
+	if (mp3dec_decode_frame(&probe, src, n, pcm, &info) > 0)
+		return 0;
+	for (int shift = 1; shift < 8; shift++)
+	{
+		n = AlignData(src, avail, shift);
+		mp3dec_init(&probe);
+		if (mp3dec_decode_frame(&probe, dec.aligned, n, pcm, &info) > 0)
+			return shift;
+	}
+	return 0;
+}
+
 void MpegDec::SetMemory(const uint8_t *data, int offset, int length, bool loop)
 {
   mp3dec_init(&dec.mp3d);
+  dec.bitShift = 0;
 
   auto it = s_custom_tracks_by_mpeg_rom_address.find(offset);
   if (it == s_custom_tracks_by_mpeg_rom_address.end()) {
@@ -228,6 +273,7 @@ void MpegDec::SetMemory(const uint8_t *data, int offset, int length, bool loop)
     dec.buffer            = data + offset;
     dec.size              = length;
     dec.custom_mpeg_data  = nullptr;
+    dec.bitShift          = FindBitShift(dec.buffer, dec.size);
   }
   else {
     // Custom track available
@@ -366,12 +412,18 @@ void MpegDec::DecodeAudio(int16_t* left, int16_t* right, int numStereoSamples)
 
 	while (numStereoSamples) {
 
-		dec.numSamples = mp3dec_decode_frame(
-			&dec.mp3d,
-			dec.buffer + dec.pos,
-			dec.size - dec.pos,
-			dec.pcm,
-			&dec.info);
+		if (dec.bitShift)
+		{
+			int n = AlignData(dec.buffer + dec.pos, dec.size - dec.pos, dec.bitShift);
+			dec.numSamples = mp3dec_decode_frame(&dec.mp3d, dec.aligned, n, dec.pcm, &dec.info);
+		}
+		else
+			dec.numSamples = mp3dec_decode_frame(
+				&dec.mp3d,
+				dec.buffer + dec.pos,
+				dec.size - dec.pos,
+				dec.pcm,
+				&dec.info);
 
 		dec.pos += dec.info.frame_bytes;
 		dec.pcmPos = 0;	// reset pos

@@ -372,7 +372,13 @@ UINT8 CDSB1::IORead8(UINT32 addr)
 		 * Bit 0: Must be 1 for most games.
 		 * Bit 1: Command pending (used by SWA instead of IRQ)
 		 * SWA requires (status&0x38)==0 or else it loops endlessly
+		 *
+		 * This is the i8251's status: bit 1 is RxRDY, set whenever a byte is
+		 * waiting, including the first one into an empty FIFO (SWA polls it,
+		 * so otherwise it never sees a lone command such as "play").
 		 */
+		if (fifoIdxR != fifoIdxW)
+			status |= 2;
 		return status;
 	}
 
