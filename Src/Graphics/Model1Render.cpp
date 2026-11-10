@@ -242,7 +242,7 @@ layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
 
 uniform vec2 screenSize;                  // 496, 384
 uniform vec2 xMap;                        // native x to clip space x: scale, offset (wide screen: the whole width)
-const float nearW = 1.0 / 1024.0;         // the near plane (the board's w is >= 0.5 or so)
+const float nearW = 1.0 / 16384.0;        // the near plane (the board's w is >= 0.5 or so)
 
 out vec2       fsUV;                      // perspective correct
 flat out vec4  fsClip;
@@ -549,7 +549,7 @@ layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
 
 uniform vec2 screenSize;                  // 496, 384
 uniform vec2 xMap;                        // native x to clip space x, as the triangles'
-const float nearW = 1.0 / 1024.0;         // the near plane, as the triangles'
+const float nearW = 1.0 / 16384.0;        // the near plane, as the triangles'
 
 out VS_OUT
 {
