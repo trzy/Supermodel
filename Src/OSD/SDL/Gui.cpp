@@ -1374,9 +1374,9 @@ static std::string GetRomPath(int selectedGame, const std::map<std::string, Game
     return {};  // no game
 }
 
-// Scale factor of the primary display, where the window opens (1 = 96 DPI). Windows only: a DPI aware build (per its manifest)
-// works in physical pixels, an unaware one is told 96 DPI and gets scaled by Windows. Elsewhere SDL reports the
-// monitor's physical DPI rather than the user's scaling preference.
+// Scale factor of the primary display, where the window opens (1 = 96 DPI). On Windows a DPI aware build (per its manifest)
+// works in physical pixels, an unaware one is told 96 DPI and gets scaled by Windows. On Linux SDL reports the monitor's
+// physical DPI rather than the user's scaling preference, so the 950x600 layout is fitted to the display instead.
 static float GetDPIScale()
 {
 #ifdef _WIN32
@@ -1386,6 +1386,13 @@ static float GetDPIScale()
         return 1.0f;
     }
     return (std::max)(1.0f, ddpi / 96.0f);
+#elif defined(__linux__)
+    SDL_DisplayMode mode;
+    if (SDL_GetDesktopDisplayMode(0, &mode) != 0) {
+        SDL_Log("Failed to get display mode: %s", SDL_GetError());
+        return 1.0f;
+    }
+    return (std::max)(1.0f, (std::min)(mode.w / 950.0f, mode.h / 600.0f));
 #else
     return 1.0f;
 #endif
