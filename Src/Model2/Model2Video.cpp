@@ -1901,7 +1901,7 @@ CVideo::WPtr CVideo::geo_texture_parameters(geo_state &geo, u32 opcode, WPtr inp
 	u32  index;
 
 	/* read in the index */
-	index = ((*input++) >> 2) & 0x1f;   // Supermodel: masked (MAME wrote past the 32 entries)
+	index = (*input++) & 0x1f;   // Supermodel: the entry number (MAME: >> 2, Gunblade's explosion flash went to the wrong entry)
 
 	/* read in the conut */
 	u32 const count = ListCount(*input++);
