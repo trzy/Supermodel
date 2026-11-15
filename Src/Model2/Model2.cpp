@@ -2717,7 +2717,6 @@ void CModel2::RunFrame(void)
       m_render->RequestDump(file);
     }
   }
-
   RenderFrame();
 }
 
@@ -3313,10 +3312,11 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
     m_comm.Init(m_server, m_config["AddressOut"].ValueAs<std::string>(), (uint16_t) m_config["PortOut"].ValueAs<unsigned>(),
                 m_config["Model2CommFrameSync"].ValueAsDefault<bool>(false));
 
-  // MAME's colour space conversion ("optimal settings for vf2, fvipers and
-  // schamp are bias 64, gain 51")
-  for (int i = 0; i < 256; i++)
-    m_gamma[i] = (uint8_t) std::max((i - 64.0) * 255.0 / 191.0, 0.0);
+  constexpr double OUTPUT_BLACK = 64.0, OUTPUT_WHITE = 255.0;
+
+  for (int i = 0; i < 256; i++) {
+    m_gamma[i] = (uint8_t)std::clamp((i - OUTPUT_BLACK) * 255.0 / (OUTPUT_WHITE - OUTPUT_BLACK), 0.0, 255.0);
+  }
 
   m_i960.AttachBus(this);
   m_i960.SetFetchRegion(0x00000000, PROGRAM_SIZE, m_program.data());
