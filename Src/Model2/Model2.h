@@ -233,7 +233,8 @@ private:
   void RunLine(void);
   void UpdateInputs(void);
   void UpdateIOBoard(const uint8_t (&an)[8], uint8_t in0, uint8_t in1, uint8_t in2);
-  void BuildVideoFrame(void);
+  void DrawTilemapLines(int y0, int y1);
+  void BuildVideoFrame(bool tilemapsDrawn = false);
   void DrawFrameBuffer(uint32_t *dest);
   bool LoadROMs(const ROMSet &rom_set);
 

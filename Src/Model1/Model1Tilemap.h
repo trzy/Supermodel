@@ -100,8 +100,12 @@ public:
    * pixel not hidden by the window mask, regardless of tile category; in the
    * split modes opaque still only draws tiles of the layer's category. A
    * disabled layer (vscroll bit 15) draws nothing even when opaque.
+   *
+   * firstLine..endLine-1 limits the drawing to those screen lines (dest is
+   * still the whole screen), for drawing each line as the beam reaches it.
    */
-  void DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int width, int height, bool opaque, const UINT32 *paletteRGBA) const;
+  void DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int width, int height, bool opaque, const UINT32 *paletteRGBA,
+                 int firstLine = 0, int endLine = 384) const;
 
   // Direct access (debugging / integrator)
   const UINT16 *GetTileRAM() const { return m_tileRAM.data(); }

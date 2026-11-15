@@ -155,7 +155,7 @@ void CSys24Tilemap::DrawSpan(UINT32 *line, const UINT32 *pens, int tilemap, int 
 }
 
 // segas24_tile_device::draw_common
-void CSys24Tilemap::DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int width, int height, bool opaque, const UINT32 *paletteRGBA) const
+void CSys24Tilemap::DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int width, int height, bool opaque, const UINT32 *paletteRGBA, int firstLine, int endLine) const
 {
   const int tilemap = layer >> 1;
   const int category = layer & 1;
@@ -164,7 +164,8 @@ void CSys24Tilemap::DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int wi
   const int mode = (m_tileRAM[0x5004 + (tilemap & 2)] >> 13) & 3;  // set by the pair's first tilemap
   const UINT16 *lineScroll = (hscroll & 0x8000) ? &m_tileRAM[0x4000 + 0x200 * tilemap] : nullptr;
   const int w = std::min(width, 496);
-  const int h = std::min(height, 384);
+  const int y0 = std::max(firstLine, 0);
+  const int h = std::min({ height, 384, endLine });
 
   if (vscroll & 0x8000)
     return;   // disabled
@@ -175,7 +176,7 @@ void CSys24Tilemap::DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int wi
     // which of the two shows (inverted for the second). Opaque draws every
     // tile, whatever its category.
     const UINT16 *mask = &m_tileRAM[(tilemap & 2) ? 0x6800 : 0x6000];
-    for (int y = 0; y < h; y++)
+    for (int y = y0; y < h; y++)
     {
       int scrollx = (-(lineScroll ? lineScroll[y] : hscroll)) & 0x1ff;
       int ty = (vscroll + y) & 0x1ff;
@@ -193,7 +194,7 @@ void CSys24Tilemap::DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int wi
   if (tilemap & 1)
     return;
   const int scrolly = vscroll & 0x1ff;
-  for (int y = 0; y < h; y++)
+  for (int y = y0; y < h; y++)
   {
     UINT32 *line = dest + (size_t) y * pitchInPixels;
     int ty = (y + scrolly) & 511;

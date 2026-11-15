@@ -2532,14 +2532,18 @@ void CModel2::DrawFrameBuffer(uint32_t *dest)
   }
 }
 
-void CModel2::BuildVideoFrame(void)
+// Draws tilemap lines y0..y1-1 with the tile RAM and palette as they are now.
+// RunFrame() draws each line as the beam reaches it (as Model 3's tilegen
+// does): games rewrite the tilemaps outside vblank too (Gunblade NY clears and
+// redraws its credit text from the last line of the frame into the next one,
+// so drawing the whole screen after the last line caught it half cleared)
+void CModel2::DrawTilemapLines(int y0, int y1)
 {
   const size_t pixels = size_t(SCREEN_WIDTH) * SCREEN_HEIGHT;
-  m_video.valid = true;
-  m_video.software = m_softwareRender;
-  m_video.geometry.Clear();
-  m_video.model2 = nullptr;
-  m_video.model2Memory = nullptr;
+  if (m_video.back.size() != pixels)
+    m_video.back.assign(pixels, 0);
+  if (m_video.hud.size() != pixels)
+    m_video.hud.assign(pixels, 0);
 
   // If the scroll colour table was written, the whole palette changes
   if (m_paletteDirty)
@@ -2550,24 +2554,37 @@ void CModel2::BuildVideoFrame(void)
   }
 
   // Tilemaps below the 3D: the backdrop (pen 0), tilemap B opaque, then A
-  m_video.back.assign(pixels, m_palette[0]);
-  m_tiles.DrawLayer(6, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, true, m_palette.data());
-  m_tiles.DrawLayer(4, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, true, m_palette.data());
-  m_tiles.DrawLayer(2, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
-  m_tiles.DrawLayer(0, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
+  std::fill(m_video.back.begin() + size_t(y0) * SCREEN_WIDTH, m_video.back.begin() + size_t(y1) * SCREEN_WIDTH, m_palette[0]);
+  m_tiles.DrawLayer(6, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, true, m_palette.data(), y0, y1);
+  m_tiles.DrawLayer(4, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, true, m_palette.data(), y0, y1);
+  m_tiles.DrawLayer(2, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data(), y0, y1);
+  m_tiles.DrawLayer(0, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data(), y0, y1);
+
+  // HUD tilemaps, on transparent
+  std::fill(m_video.hud.begin() + size_t(y0) * SCREEN_WIDTH, m_video.hud.begin() + size_t(y1) * SCREEN_WIDTH, 0u);
+  m_tiles.DrawLayer(7, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data(), y0, y1);
+  m_tiles.DrawLayer(5, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data(), y0, y1);
+  m_tiles.DrawLayer(3, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data(), y0, y1);
+  m_tiles.DrawLayer(1, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data(), y0, y1);
+}
+
+void CModel2::BuildVideoFrame(bool tilemapsDrawn)
+{
+  const size_t pixels = size_t(SCREEN_WIDTH) * SCREEN_HEIGHT;
+  m_video.valid = true;
+  m_video.software = m_softwareRender;
+  m_video.geometry.Clear();
+  m_video.model2 = nullptr;
+  m_video.model2Memory = nullptr;
+
+  if (!tilemapsDrawn)
+    DrawTilemapLines(0, SCREEN_HEIGHT);
 
   // Render test mode: the i960 writes the picture into the frame buffer
   // itself (Last Bronx's title screen), shown in place of the 3D and covering
   // the tilemaps below it
   if (m_renderTestMode)
     DrawFrameBuffer(m_video.back.data());
-
-  // HUD tilemaps, on transparent
-  m_video.hud.assign(pixels, 0);
-  m_tiles.DrawLayer(7, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
-  m_tiles.DrawLayer(5, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
-  m_tiles.DrawLayer(3, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
-  m_tiles.DrawLayer(1, m_video.hud.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
 
   if (!m_softwareRender)
   {
@@ -2656,6 +2673,8 @@ void CModel2::RunFrame(void)
         IRQUpdate();
       }
     }
+    if (m_line < SCREEN_HEIGHT)
+      DrawTilemapLines(m_line, m_line + 1);
     RunLine();
   }
 
@@ -2664,7 +2683,7 @@ void CModel2::RunFrame(void)
   if (m_billBoard)
     m_billBoard->RunFrame();
 
-  BuildVideoFrame();
+  BuildVideoFrame(true);
   m_frameNumber++;
 
   if (m_logIO && (m_frameNumber % 60) == 0)
