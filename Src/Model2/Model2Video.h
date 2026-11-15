@@ -46,6 +46,7 @@
 #define INCLUDED_MODEL2VIDEO_H
 
 #include "Types.h"
+#include "Game.h"
 #include <cstdint>
 #include <memory>
 #include <functional>
@@ -126,6 +127,11 @@ namespace Model2
     // Top Skater: a second matrix (commands 1B, 1C) and compact object
     // records (command 11)
     void SetGeoTopSkater(bool on) { m_geoTopSkater = on; }
+
+    // The board's geometrizer program differs: TGP (Model 2, 2A), SHARC (2B)
+    // or TGPx4 (2C)
+    void SetStepping(Game::Stepping stepping) { m_stepping = stepping; }
+
     bool GPUQuads() const { return m_gpuQuads; }
 
     // Wide screen: viewports at the screen's left and right edges reach this
@@ -197,6 +203,7 @@ namespace Model2
     uint32_t m_geo_read_start_address = 0;
     bool     m_geo_mesh = false;
     bool     m_geoTopSkater = false;
+    Game::Stepping m_stepping = Game::Stepping::MODEL2;
     bool     m_render_done = false;
     int16_t  m_crtc_xoffset = 0, m_crtc_yoffset = 0;
     int16_t  m_xoffs = 90, m_yoffs = -8;      // the renderer's copies

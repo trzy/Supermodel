@@ -1898,10 +1898,14 @@ CVideo::WPtr CVideo::geo_polygon_data(geo_state &geo, u32 opcode, WPtr input)
 /* Command 06: Texture Parameters */
 CVideo::WPtr CVideo::geo_texture_parameters(geo_state &geo, u32 opcode, WPtr input)
 {
-	u32  index;
-
 	/* read in the index */
-	index = (*input++) & 0x1f;   // Supermodel: the entry number (MAME: >> 2, Gunblade's explosion flash went to the wrong entry)
+	// Each entry holds 4 values (diffuse, ambient, specular control, specular
+	// scale). Model 2/2A games send the position of the entry's first value,
+	// so divide by 4 to get the entry number (VF2). 2B/2C games send the entry
+	// number itself (Gunblade NY).
+	bool const entry = m_stepping == Game::Stepping::MODEL2B || m_stepping == Game::Stepping::MODEL2C;
+	u32 index = entry ? (*input & 0x1f) : ((*input >> 2) & 0x1f);
+	input++;
 
 	/* read in the conut */
 	u32 const count = ListCount(*input++);

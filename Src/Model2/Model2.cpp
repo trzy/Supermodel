@@ -3213,6 +3213,7 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
   m_original = game.stepping == Game::Stepping::MODEL2;
   m_model2b = game.stepping == Game::Stepping::MODEL2B;
   m_model2c = game.stepping == Game::Stepping::MODEL2C;
+  m_video3d.SetStepping(game.stepping);
   m_layout = LayoutOf(game.name, game.parent);
   m_driveBoard.present = game.driveboard_type == Game::DRIVE_BOARD_SKI || game.driveboard_type == Game::DRIVE_BOARD_MOTION;
   m_driveBoard.ski = game.driveboard_type == Game::DRIVE_BOARD_SKI;
