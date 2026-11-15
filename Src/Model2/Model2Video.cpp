@@ -891,6 +891,14 @@ void CVideo::model2_3d_push(raster_state *raster, u32 input)
 				// calculate clipping planes
 				ComputeClipPlanes();
 
+				// Supermodel: each window starts a new layer, depth sorted on its
+				// own. Counted here, as the rasterizer takes the command, so the
+				// 2B geometrizer program's windows count too (MAME counts them in
+				// its simulated geometrizer: with the program, every polygon was
+				// in one layer and Sonic Championship's shadows sorted into the
+				// fighters)
+				raster->cur_window++;
+
 				/* done with this command */
 				raster->cur_command = 0;
 			}
@@ -1811,8 +1819,6 @@ CVideo::WPtr CVideo::geo_window_data(geo_state &geo, u32 opcode, WPtr input)
 
 	/* start by pushing the opcode */
 	model2_3d_push(raster, opcode >> 23);
-
-	raster->cur_window++;
 
 	/*
 	    we're going to move 6 coordinates to the 3d rasterizer:
