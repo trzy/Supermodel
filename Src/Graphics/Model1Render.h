@@ -84,6 +84,14 @@ public:
   void SetWideScreen(bool wideScreen, bool wideBackground) { m_wideScreen = wideScreen; m_wideBackground = wideBackground; }
   float WideExtension() const { return (m_wideScreen && m_xPixels) ? float(m_xOffset) * float(Model1::SCREEN_WIDTH) / float(m_xPixels) : 0.0f; }
 
+  // How the hardware's translucency (Model 1 moire quads, Model 2 checkerboard
+  // polygons) is drawn (the Transparency setting): every other pixel of the
+  // output, a 1x1 pixel checkerboard (Original; at 496x384 the hardware's);
+  // every other pixel of the native 496x384 grid, scaled with the resolution
+  // (Moire); or blended 50% with what is behind (Blend)
+  enum class Transparency { Original = 0, Moire = 1, Blend = 2 };
+  void SetTransparency(Transparency mode) { m_transparency = mode; }
+
   // Debugging aid: writes the viewable area of the next frame drawn to a BMP file
   void RequestDump(const std::string &file) { m_dumpFile = file; }
 
@@ -109,6 +117,17 @@ private:
   void DrawBatches(const Model1::Frame &frame, const std::vector<Model1::Batch> &batches);
   void AddQuad(const Model1::ScreenQuad &q, float expand);
   void SetScissor(int x1, int y1, int x2, int y2);
+  void BeginTransparency();
+
+  // Transparency::Blend: overlapping translucent polygons must blend a pixel
+  // once (the hardware's checkerboard draws the same pixels again), so the
+  // frame is drawn in a frame buffer with a stencil buffer (the window's has
+  // none): an opaque polygon clears a pixel's stencil, a translucent one only
+  // blends where it is clear and sets it. The stencil state can't change
+  // within a draw, so the polygons are drawn in runs of the same kind.
+  struct Run { GLint first; GLsizei count; bool translucent; };
+  bool EnsureBlendTarget();
+  void DrawRuns(GLenum mode, const std::vector<Run> &runs, size_t begin, size_t end);
   void SnapshotFrameBuffer();
   bool InitModel2();
   void DrawModel2(const std::vector<Model2::GPUVertex> &vertices, const Model2::CVideo::Memory &memory, bool quads);
@@ -119,7 +138,7 @@ private:
 
   GLSLShader  m_quadShader;
   GLSLShader  m_imageShader;
-  GLint       m_quadScreenSizeLoc = -1, m_quadViewportLoc = -1, m_quadXMapLoc = -1;
+  GLint       m_quadScreenSizeLoc = -1, m_quadViewportLoc = -1, m_quadXMapLoc = -1, m_quadTransparencyLoc = -1;
   GLint       m_imageModeLoc = -1, m_imageTexLoc = -1, m_imageSnapshotLoc = -1;
   GLuint      m_vao = 0, m_vbo = 0, m_imageVAO = 0;
   GLuint      m_backTexture = 0, m_hudTexture = 0, m_softwareTexture = 0, m_snapshotTexture = 0;
@@ -133,9 +152,9 @@ private:
   enum { M2_SHEET_LEVELS = 9 };   // mip levels 1-9 (level 9: 4x2 texels)
   void        UploadModel2Sheet(GLuint texture, const uint32_t *ram);
   GLSLShader  m_m2Shader;
-  GLint       m_m2ScreenSizeLoc = -1, m_m2ViewportLoc = -1, m_m2XMapLoc = -1;
+  GLint       m_m2ScreenSizeLoc = -1, m_m2ViewportLoc = -1, m_m2XMapLoc = -1, m_m2TransparencyLoc = -1;
   GLuint      m_m2QuadProgram = 0;      // quads: vertex + geometry + fragment shaders
-  GLint       m_m2QuadScreenSizeLoc = -1, m_m2QuadViewportLoc = -1, m_m2QuadXMapLoc = -1;
+  GLint       m_m2QuadScreenSizeLoc = -1, m_m2QuadViewportLoc = -1, m_m2QuadXMapLoc = -1, m_m2QuadTransparencyLoc = -1;
   GLuint      m_m2VAO = 0, m_m2VBO = 0;
   GLuint      m_m2Buffers[M2_NUM_BUFFERS] = { };
   GLuint      m_m2Textures[M2_NUM_BUFFERS] = { };
@@ -148,6 +167,12 @@ private:
   bool        m_crackFill = true;
   std::string m_dumpFile;
   bool        m_wideScreen = false, m_wideBackground = false;
+  Transparency m_transparency = Transparency::Original;
+  GLuint      m_blendFBO = 0, m_blendColor = 0, m_blendDepthStencil = 0;
+  unsigned    m_blendWidth = 0, m_blendHeight = 0;
+  bool        m_blendStencil = false;   // drawing this frame in m_blendFBO, with the stencil
+  bool        m_transparencyTargetFailed = false;
+  std::vector<Run> m_runs;
   float       m_xMap[2] = { 2.0f / 496.0f, -1.0f };   // native x to clip space x (see DrawFrame())
 };
 

@@ -1590,6 +1590,12 @@ Util::Config::Node DefaultConfig()
   // only 2B has the low level one (2A/2C are always simulated)
   config.Set("HighLevelGeometrizer", true, "Core");
   config["HighLevelGeometrizer"].GetValue()->GetValueRange()->SetNote("Model 1/2 only");
+  // CModel1, CModel2: how translucent polygons (Model 1 moire, Model 2
+  // checkerboard) are drawn: every other pixel (1x1), every other pixel of
+  // the native grid (scaled with the resolution), or blended 50%
+  config.Set("Transparency", 0, "Video", 0, 0, { 0,1,2 });
+  SetLabels("Transparency", { "Original", "Moire", "Blend" });
+  config["Transparency"].GetValue()->GetValueRange()->SetNote("Model 1/2 only");
   config.Set<std::string>("ROMDirectory", FileSystemPath::GetPath(FileSystemPath::ROMs), "Core", "", ""); // where the GUI looks for <romset>.zip
   // 2D and 3D graphics engines
 #ifndef SUPERMODEL_OSX
@@ -1965,6 +1971,9 @@ static void Help(void)
   puts("  -stretch                Fit viewport to resolution, ignoring aspect ratio");
   puts("  -upscalemode=<n>        2D layer upscaling filter mode (range 0-3)");
   puts("  -crtcolors=<n>          CRT color emulation (range 0-5)");
+  puts("  -transparency=<n>       Model 1/2 translucent polygons: 0=original (1x1 pixel");
+  puts("                          checkerboard) [Default], 1=moire (native pixel");
+  puts("                          checkerboard, scaled), 2=blend");
   puts("  -no-throttle            Disable frame rate lock");
   puts("  -vsync                  Lock to vertical refresh rate [Default]");
   puts("  -no-vsync               Do not lock to vertical refresh rate");
@@ -2276,6 +2285,29 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
               }
               catch (...) {
                   ErrorLog("'-crtcolors' requires an integer argument (e.g., '-crtcolors=1').");
+                  cmd_line.error = true;
+              }
+          }
+      }
+      else if (arg == "-transparency" || arg.find("-transparency=") == 0) {
+
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-transparency' requires an integer argument (e.g., '-transparency=2').");
+              cmd_line.error = true;
+          }
+          else {
+
+              try {
+                  int val = std::stoi(parts[1]);
+                  val = std::clamp(val, 0, 2);
+
+                  cmd_line.config.Set("Transparency", val);
+              }
+              catch (...) {
+                  ErrorLog("'-transparency' requires an integer argument (e.g., '-transparency=2').");
                   cmd_line.error = true;
               }
           }

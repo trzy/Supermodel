@@ -1580,6 +1580,7 @@ void CModel1::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, Su
       crackFill = atoi(c) != 0;
     m_render->SetEdgeExpand(expand, crackFill);
     m_render->SetWideScreen(m_config["WideScreen"].ValueAsDefault<bool>(false), m_config["WideBackground"].ValueAsDefault<bool>(false));
+    m_render->SetTransparency(CModel1Render::Transparency(std::clamp(m_config["Transparency"].ValueAsDefault<int>(0), 0, 2)));
   }
 }
 

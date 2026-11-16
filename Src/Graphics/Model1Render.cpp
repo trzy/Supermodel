@@ -85,6 +85,8 @@ static const char s_quadFragmentShader[] = R"glsl(
 uniform vec2 screenSize;                  // 496, 384
 uniform vec4 viewport;                    // x, y, width, height of the viewable area in the frame buffer
 
+uniform int transparency;                 // moire: 0 = output pixel checkerboard, 1 = native grid checkerboard, 2 = blended
+
 in vec4 fsColor;
 flat in float fsMoire;
 
@@ -94,10 +96,18 @@ void main(void)
 {
   if (fsMoire > 0.5)
   {
-    // checkerboard on the native pixel grid: MAME draws pixels where (x ^ y) & 1 == 0, y down
-    ivec2 p = ivec2(floor((gl_FragCoord.xy - viewport.xy) * screenSize / viewport.zw));
+    if (transparency == 2)
+    {
+      fragColor = vec4(fsColor.rgb, 0.5);
+      return;
+    }
+    // checkerboard: MAME draws pixels where (x ^ y) & 1 == 0, y down. On the
+    // output's pixels from the viewable area's top left (at 496x384 the native
+    // grid), or on the native pixel grid (scaled with the resolution)
+    ivec2 p = transparency == 1 ? ivec2(floor((gl_FragCoord.xy - viewport.xy) * screenSize / viewport.zw))
+                                : ivec2(floor(gl_FragCoord.xy - viewport.xy));
     int x = p.x;
-    int y = int(screenSize.y) - 1 - p.y;
+    int y = (transparency == 1 ? int(screenSize.y) : int(viewport.w)) - 1 - p.y;
     if (((x ^ y) & 1) != 0)
       discard;
   }
@@ -264,6 +274,7 @@ static const char s_m2FragmentShader[] = R"glsl(
 
 uniform vec2 screenSize;                  // 496, 384
 uniform vec4 viewport;                    // x, y, width, height of the viewable area in the frame buffer
+uniform int  transparency;                // checkerboard: 0 = output pixels, 1 = native grid, 2 = blended
 uniform usampler2D     texRAM0;           // texture RAM 0: 2x2 texel blocks, a mip level per hardware level
 uniform usampler2D     texRAM1;           // texture RAM 1
 uniform usamplerBuffer lumaRAM;           // 8-bit
@@ -438,13 +449,15 @@ uint fetchTexel(bool translucent, uint th0, uint th2, int miplevel, int u, int v
 uint xlat(uint i)   { return texelFetch(colorXlat, int(i)).r & 0xffu; }
 uint gammaOf(uint i) { return texelFetch(gammaTable, int(i)).r; }
 
+float outAlpha = 1.0;                     // 0.5: a checkerboard polygon, blended
+
 vec4 shade(uint color, uint luma)
 {
   // 6 bits of luma and 5 bits per colour component index the colour tables
   uint r = gammaOf(xlat(0x0000u + (((color >>  0) & 0x1fu) << 8) + luma));
   uint g = gammaOf(xlat(0x2000u + (((color >>  5) & 0x1fu) << 8) + luma));
   uint b = gammaOf(xlat(0x4000u + (((color >> 10) & 0x1fu) << 8) + luma));
-  return vec4(float(r), float(g), float(b), 255.0) / 255.0;
+  return vec4(vec3(float(r), float(g), float(b)) / 255.0, outAlpha);
 }
 
 void main(void)
@@ -465,9 +478,25 @@ void main(void)
   uint renderer = (th0 >> 13) & 3u;       // bit 1 = textured, bit 0 = translucent
   bool translucent = (renderer & 1u) != 0u;
 
-  // checkerboard: every other pixel of the native grid is skipped
-  if (((th0 >> 15) & 1u) != 0u && ((x ^ y) & 1) == 0)
-    discard;
+  // checkerboard (the hardware's translucency): every other pixel of the
+  // output is skipped (counted from the viewable area's top left: at 496x384
+  // the native grid), or of the native grid; or the polygon is blended 50%
+  if (((th0 >> 15) & 1u) != 0u)
+  {
+    if (transparency == 2)
+      outAlpha = 0.5;
+    else
+    {
+      int cx = x, cy = y;
+      if (transparency == 0)
+      {
+        cx = int(floor(gl_FragCoord.x - viewport.x));
+        cy = int(viewport.w) - 1 - int(floor(gl_FragCoord.y - viewport.y));
+      }
+      if (((cx ^ cy) & 1) == 0)
+        discard;
+    }
+  }
 
   uint colorbase = (th3 >> 6) & 0x3ffu;
   if ((renderer & 2u) == 0u)
@@ -830,6 +859,7 @@ bool CModel1Render::InitModel2()
   m_m2ScreenSizeLoc = m_m2Shader.GetUniformLocation("screenSize");
   m_m2ViewportLoc = m_m2Shader.GetUniformLocation("viewport");
   m_m2XMapLoc = m_m2Shader.GetUniformLocation("xMap");
+  m_m2TransparencyLoc = m_m2Shader.GetUniformLocation("transparency");
 
   glGenVertexArrays(1, &m_m2VAO);
   glGenBuffers(1, &m_m2VBO);
@@ -897,6 +927,7 @@ bool CModel1Render::InitModel2()
     m_m2QuadScreenSizeLoc = glGetUniformLocation(m_m2QuadProgram, "screenSize");
     m_m2QuadViewportLoc = glGetUniformLocation(m_m2QuadProgram, "viewport");
     m_m2QuadXMapLoc = glGetUniformLocation(m_m2QuadProgram, "xMap");
+    m_m2QuadTransparencyLoc = glGetUniformLocation(m_m2QuadProgram, "transparency");
     glUseProgram(0);
   }
   else
@@ -974,13 +1005,27 @@ void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, c
   glBindVertexArray(m_m2VAO);
   glBindBuffer(GL_ARRAY_BUFFER, m_m2VBO);
   glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Model2::GPUVertex), vertices.data(), GL_STREAM_DRAW);
+  BeginTransparency();
+  // Runs of opaque and translucent (checkerboard) primitives with the stencil,
+  // else one run
+  m_runs.clear();
+  const size_t primSize = quads ? 4 : 3;
+  for (size_t i = 0; i + primSize <= vertices.size(); i += primSize)
+  {
+    const bool translucent = m_blendStencil && ((vertices[i].header01 >> 15) & 1);
+    if (!m_runs.empty() && m_runs.back().translucent == translucent)
+      m_runs.back().count += (GLsizei) primSize;
+    else
+      m_runs.push_back({ (GLint) i, (GLsizei) primSize, translucent });
+  }
   if (quads && m_m2QuadProgram)
   {
     glUseProgram(m_m2QuadProgram);
     glUniform2f(m_m2QuadScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
     glUniform4f(m_m2QuadViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
     glUniform2f(m_m2QuadXMapLoc, m_xMap[0], m_xMap[1]);
-    glDrawArrays(GL_LINES_ADJACENCY, 0, (GLsizei) vertices.size());
+    glUniform1i(m_m2QuadTransparencyLoc, int(m_transparency));
+    DrawRuns(GL_LINES_ADJACENCY, m_runs, 0, m_runs.size());
     glUseProgram(0);
   }
   else if (!quads)  // (quads without the program: nothing, they aren't triangles)
@@ -989,11 +1034,25 @@ void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, c
     glUniform2f(m_m2ScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
     glUniform4f(m_m2ViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
     glUniform2f(m_m2XMapLoc, m_xMap[0], m_xMap[1]);
-    glDrawArrays(GL_TRIANGLES, 0, (GLsizei) vertices.size());
+    glUniform1i(m_m2TransparencyLoc, int(m_transparency));
+    DrawRuns(GL_TRIANGLES, m_runs, 0, m_runs.size());
     m_m2Shader.DisableShader();
   }
+  glDisable(GL_BLEND);
+  glDisable(GL_STENCIL_TEST);
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+// Transparency::Blend: the polygons are drawn back to front, the translucent
+// ones (alpha 0.5) blended over what is behind them
+void CModel1Render::BeginTransparency()
+{
+  if (m_transparency == Transparency::Blend)
+  {
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  }
 }
 
 /******************************************************************************
@@ -1137,25 +1196,42 @@ void CModel1Render::DrawBatches(const Model1::Frame &frame, const std::vector<Mo
   // gives it its exact shape (small details such as eyes and eyebrows stay
   // clean); the grown quads only show where nothing covers the pixel.
   m_vertices.clear();
-  std::vector<std::pair<GLint, GLsizei>> ranges;
-  ranges.reserve(batches.size());
+  m_runs.clear();
+  const bool blend = m_transparency == Transparency::Blend;
+  std::vector<std::pair<size_t, size_t>> batchRuns;   // each batch's runs (Blend: opaque, translucent)
+  batchRuns.reserve(batches.size());
+  size_t batchFirstRun = 0;
+  auto add = [&](const Model1::ScreenQuad &q, float expand)
+  {
+    const GLint first = (GLint) m_vertices.size();
+    AddQuad(q, expand);
+    const GLsizei count = (GLsizei) (m_vertices.size() - first);
+    const bool translucent = m_blendStencil && (q.color & Model1::MOIRE);
+    if (!count)
+      return;
+    if (m_runs.size() > batchFirstRun && m_runs.back().translucent == translucent)
+      m_runs.back().count += count;
+    else
+      m_runs.push_back({ first, count, translucent });
+  };
   for (const Model1::Batch &b : batches)
   {
-    GLint first = (GLint) m_vertices.size();
+    batchFirstRun = m_runs.size();
     if (m_crackFill)
     {
+      // (blended moire quads only exact: drawn twice they'd be blended twice)
       for (uint32_t i = 0; i < b.count; i++)
-        if (!frame.quads[b.first + i].line)
-          AddQuad(frame.quads[b.first + i], m_edgeExpand);
+        if (!frame.quads[b.first + i].line && !(blend && (frame.quads[b.first + i].color & Model1::MOIRE)))
+          add(frame.quads[b.first + i], m_edgeExpand);
       for (uint32_t i = 0; i < b.count; i++)
-        AddQuad(frame.quads[b.first + i], 0.0f);
+        add(frame.quads[b.first + i], 0.0f);
     }
     else
     {
       for (uint32_t i = 0; i < b.count; i++)
-        AddQuad(frame.quads[b.first + i], m_edgeExpand);
+        add(frame.quads[b.first + i], m_edgeExpand);
     }
-    ranges.emplace_back(first, (GLsizei) (m_vertices.size() - first));
+    batchRuns.emplace_back(batchFirstRun, m_runs.size());
   }
   if (m_vertices.empty())
     return;
@@ -1168,19 +1244,91 @@ void CModel1Render::DrawBatches(const Model1::Frame &frame, const std::vector<Mo
   glUniform2f(m_quadScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
   glUniform4f(m_quadViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
   glUniform2f(m_quadXMapLoc, m_xMap[0], m_xMap[1]);
+  glUniform1i(m_quadTransparencyLoc, int(m_transparency));
+  BeginTransparency();
 
   glEnable(GL_SCISSOR_TEST);
   for (size_t i = 0; i < batches.size(); i++)
   {
-    if (!ranges[i].second)
+    if (batchRuns[i].first == batchRuns[i].second)
       continue;
     const Model1::Batch &b = batches[i];
     SetScissor(b.x1, b.y1, b.x2, b.y2);
-    glDrawArrays(GL_TRIANGLES, ranges[i].first, ranges[i].second);
+    DrawRuns(GL_TRIANGLES, m_runs, batchRuns[i].first, batchRuns[i].second);
   }
 
   m_quadShader.DisableShader();
+  glDisable(GL_BLEND);
+  glDisable(GL_STENCIL_TEST);
   glBindVertexArray(0);
+}
+
+// The runs [begin, end): with the stencil (Transparency::Blend), an opaque
+// run clears the stencil where it draws, a translucent one only draws where
+// it is clear and sets it
+void CModel1Render::DrawRuns(GLenum mode, const std::vector<Run> &runs, size_t begin, size_t end)
+{
+  if (m_blendStencil)
+  {
+    glEnable(GL_STENCIL_TEST);
+    glStencilMask(0xff);
+  }
+  for (size_t i = begin; i < end; i++)
+  {
+    if (m_blendStencil)
+    {
+      if (runs[i].translucent)
+      {
+        glStencilFunc(GL_EQUAL, 0, 0xff);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+      }
+      else
+      {
+        glStencilFunc(GL_ALWAYS, 0, 0xff);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+      }
+    }
+    glDrawArrays(mode, runs[i].first, runs[i].count);
+  }
+}
+
+// The frame buffer for Transparency::Blend, the size of the target
+bool CModel1Render::EnsureBlendTarget()
+{
+  if (m_blendFBO && m_blendWidth == m_totalXPixels && m_blendHeight == m_totalYPixels)
+    return true;
+  if (!m_blendFBO)
+  {
+    glGenFramebuffers(1, &m_blendFBO);
+    glGenTextures(1, &m_blendColor);
+    glGenRenderbuffers(1, &m_blendDepthStencil);
+  }
+  m_blendWidth = m_totalXPixels;
+  m_blendHeight = m_totalYPixels;
+  glBindTexture(GL_TEXTURE_2D, m_blendColor);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_blendWidth, m_blendHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glBindRenderbuffer(GL_RENDERBUFFER, m_blendDepthStencil);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_blendWidth, m_blendHeight);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, m_blendFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_blendColor, 0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_blendDepthStencil);
+  bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+  glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);
+  if (!complete)
+  {
+    ErrorLog("Model 1/2 renderer: unable to create the frame buffer for blended transparency; overlapping translucent polygons will be darker.");
+    glDeleteFramebuffers(1, &m_blendFBO);
+    glDeleteTextures(1, &m_blendColor);
+    glDeleteRenderbuffers(1, &m_blendDepthStencil);
+    m_blendFBO = m_blendColor = m_blendDepthStencil = 0;
+    m_blendWidth = m_blendHeight = 0;
+    m_transparencyTargetFailed = true;
+  }
+  return complete;
 }
 
 void CModel1Render::DrawImage(GLuint texture, const uint32_t *pixels, int mode)
@@ -1222,7 +1370,13 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
   if (!m_ready)
     return;
 
-  if (m_aaTarget)
+  // Transparency::Blend: drawn in m_blendFBO (with a stencil buffer), copied
+  // to the target at the end
+  m_blendStencil = m_transparency == Transparency::Blend && frame.valid && !frame.software
+    && !m_transparencyTargetFailed && EnsureBlendTarget();
+  if (m_blendStencil)
+    glBindFramebuffer(GL_FRAMEBUFFER, m_blendFBO);
+  else if (m_aaTarget)
     glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);
 
   GLboolean scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
@@ -1236,7 +1390,14 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
   glDepthMask(GL_FALSE);
   glViewport(0, 0, m_totalXPixels, m_totalYPixels);
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
+  if (m_blendStencil)
+  {
+    glStencilMask(0xff);
+    glClearStencil(0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  }
+  else
+    glClear(GL_COLOR_BUFFER_BIT);
 
   // The 4:3 area, and with wide screen the whole width: the 3D is drawn over
   // it (xMap maps native x there; the fragment shaders' native pixels still
@@ -1281,6 +1442,16 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
         DrawImage(m_hudTexture, nullptr, 2);
       }
     }
+  }
+
+  if (m_blendStencil)
+  {
+    glDisable(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_blendFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_aaTarget);
+    glBlitFramebuffer(0, 0, m_totalXPixels, m_totalYPixels, 0, 0, m_totalXPixels, m_totalYPixels, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);
+    m_blendStencil = false;
   }
 
   if (!m_dumpFile.empty())
@@ -1368,6 +1539,7 @@ Result CModel1Render::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, un
   m_quadScreenSizeLoc = m_quadShader.GetUniformLocation("screenSize");
   m_quadViewportLoc = m_quadShader.GetUniformLocation("viewport");
   m_quadXMapLoc = m_quadShader.GetUniformLocation("xMap");
+  m_quadTransparencyLoc = m_quadShader.GetUniformLocation("transparency");
   m_imageModeLoc = m_imageShader.GetUniformLocation("mode");
   m_imageTexLoc = m_imageShader.GetUniformLocation("tex");
   m_imageSnapshotLoc = m_imageShader.GetUniformLocation("snapshot");
@@ -1421,4 +1593,10 @@ CModel1Render::~CModel1Render()
       glDeleteProgram(m_m2QuadProgram);
   if (m_m2Textures[0])
     glDeleteTextures(M2_NUM_BUFFERS, m_m2Textures);
+  if (m_blendFBO)
+    glDeleteFramebuffers(1, &m_blendFBO);
+  if (m_blendColor)
+    glDeleteTextures(1, &m_blendColor);
+  if (m_blendDepthStencil)
+    glDeleteRenderbuffers(1, &m_blendDepthStencil);
 }

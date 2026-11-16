@@ -3240,7 +3240,10 @@ void CModel2::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, Su
   if (!m_render)
     ErrorLog("Model 2: the 2D renderer is not a Model 1/2 renderer. Nothing will be drawn.");
   else
+  {
     m_render->SetWideScreen(m_config["WideScreen"].ValueAsDefault<bool>(false), m_config["WideBackground"].ValueAsDefault<bool>(false));
+    m_render->SetTransparency(CModel1Render::Transparency(std::clamp(m_config["Transparency"].ValueAsDefault<int>(0), 0, 2)));
+  }
 }
 
 bool CModel2::LoadROMs(const ROMSet &rom_set)
