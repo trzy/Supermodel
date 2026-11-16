@@ -195,7 +195,7 @@ private:
   };
   UINT32 GeoSHARCRead(UINT32 addr);
   void   GeoSHARCWrite(UINT32 addr, UINT32 data);
-  uint32_t GeoFeed(bool command);
+  uint32_t GeoFeed();
   void   RunGeometrizer();
   void   CompareGeometrizers(const std::vector<uint32_t> &hle, const std::vector<uint32_t> &lle);
   uint32_t copro_sincos_r(unsigned offset);
@@ -319,7 +319,18 @@ private:
   uint32_t  m_geoROMAddress = 0;          // the address latched at 430000
   uint32_t  m_geoOutCount = 0;            // words output this frame (debug log)
   bool      m_geoEndSeen = false, m_geoParked = false;
-  uint32_t  m_geoFFFeedCount = ~0u;       // m_geoFeedCount at the last FF000000 output
+  bool      m_geoEndFed = false;          // the end function was fed to the program this frame
+
+  // The buffer controller's function table (function port 00800004/8 + 0x10 n,
+  // written by the game at boot): each function's command length and data
+  // length (bit 7: LOOP), by which it parses the display list it feeds
+  uint8_t   m_geoCommandLength[64] = {}, m_geoDataLength[64] = {};
+  enum class GeoParse : uint8_t { Function, Command, DataCount, Data, LoopAttribute, LoopData };
+  GeoParse  m_geoParse = GeoParse::Function;   // what the next word fed is
+  uint32_t  m_geoParseFunction = 0;       // the function being fed
+  uint32_t  m_geoParseCount = 0;          // words left in its command or data part
+  void      GeoParseData();
+  static void GeoDefaultLengths(uint8_t *command, uint8_t *data);
 
   // Video
   uint32_t  m_videoControl = 0;

@@ -516,9 +516,9 @@ void CModel2::WriteData(UINT32 addr, UINT32 data)
 
  Worked out from Fighting Vipers' program (MAME never implemented this):
    400000 read    the display list, read from buffer RAM at the geometrizer
-                  read address; jumps (bit 31) are followed where a command
-                  word is read, as MAME's geo_parse does (data may have bit
-                  31 set)
+                  read address by the buffer controller, which parses it
+                  with the function table the game set (GeoFeed): jumps
+                  (bit 31) are followed where a function is read
    410000 write   output to the z-sort/rasterizer (MAME's model2_3d_push; the
                   same words as MAME's simulation pushes, but command words
                   have FF in the top byte, which also ends polygon data)
@@ -532,18 +532,100 @@ void CModel2::WriteData(UINT32 addr, UINT32 data)
  Here a frame runs at once where the simulation would parse the list.
 ******************************************************************************/
 
-uint32_t CModel2::GeoFeed(bool command)
+// The function table for a state saved before it was kept (the game wrote
+// it at boot): what the 2B games write, merged. Fighting Vipers, Last Bronx,
+// Sonic Championship, Virtual On and Dynamite Baseball 97 agree except on 0D
+// (Last Bronx 2, the others 3) and 10 (Virtual On 0, the others 1); functions
+// a game doesn't use are 0. 20-2F repeat 00-0F.
+void CModel2::GeoDefaultLengths(uint8_t *command, uint8_t *data)
+{
+  static const uint8_t c[64] = {
+    0x00, 0x04, 0x08, 0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x03, 0x0C, 0x03, 0x03, 0x20, 0x00,
+    0x01, 0x04, 0x08, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x04, 0x01, 0x00, 0x00, 0x00,
+    0x01, 0x04, 0x08, 0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x03, 0x0C, 0x03, 0x03, 0x20, 0x00,
+    0x01, 0x04, 0x08, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  static const uint8_t d[64] = {
+    0x00, 0x00, 0x88, 0x00, 0x01, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+    0x00, 0x00, 0x88, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x88, 0x00, 0x01, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+    0x00, 0x00, 0x88, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  memcpy(command, c, sizeof(c));
+  memcpy(data, d, sizeof(d));
+}
+
+// After a function's command words: its data, by its data length. LOOP (bit
+// 7, direct data): an attribute, then that many words, until an attribute
+// with its low four bits zero (END). Otherwise a count n, then n times that
+// many words (object data write: start address, n, n words).
+void CModel2::GeoParseData()
+{
+  uint8_t length = m_geoDataLength[m_geoParseFunction];
+  if (length & 0x80)
+    m_geoParse = GeoParse::LoopAttribute;
+  else if (length & 0x7f)
+    m_geoParse = GeoParse::DataCount;
+  else
+    m_geoParse = GeoParse::Function;
+}
+
+// The buffer controller feeding the display list: it parses it with the
+// function table, so it knows which words are functions; only there is bit 31
+// a jump (data words, e.g. negative floats, may have it set)
+uint32_t CModel2::GeoFeed()
 {
   for (int jumps = 0; jumps < 64; jumps++)
   {
-    // a runaway list ends: the end command (with its check copies)
+    // a runaway list ends: the end function (with its check copies)
     if (++m_geoFeedCount > 0x40000)
+    {
+      m_geoEndFed = true;
+      m_geoParse = GeoParse::Function;
       return 0x07800f0f;
+    }
     uint32_t word = m_bufferRAM[m_geoFeedAddress & 0x7fff];
     m_geoFeedAddress++;
-    if (!command || !(word & 0x80000000))
+    switch (m_geoParse)
+    {
+    case GeoParse::Function:
+      if (word & 0x80000000)
+      {
+        m_geoFeedAddress = (word & 0x1ffff) / 4;
+        continue;
+      }
+      m_geoParseFunction = (word >> 23) & 0x3f;
+      // The end function (0F): the frame's list is done, and the geometrizer
+      // is idle until the frame ends
+      if (m_geoParseFunction == 0x0f)
+        m_geoEndFed = true;
+      m_geoParseCount = m_geoCommandLength[m_geoParseFunction];
+      if (m_geoParseCount)
+        m_geoParse = GeoParse::Command;
+      else
+        GeoParseData();
       return word;
-    m_geoFeedAddress = (word & 0x1ffff) / 4;
+    case GeoParse::Command:
+      if (--m_geoParseCount == 0)
+        GeoParseData();
+      return word;
+    case GeoParse::DataCount:
+      m_geoParseCount = word * (m_geoDataLength[m_geoParseFunction] & 0x7f);
+      m_geoParse = m_geoParseCount ? GeoParse::Data : GeoParse::Function;
+      return word;
+    case GeoParse::Data:
+      if (--m_geoParseCount == 0)
+        m_geoParse = GeoParse::Function;
+      return word;
+    case GeoParse::LoopAttribute:
+      m_geoParseCount = m_geoDataLength[m_geoParseFunction] & 0x7f;
+      m_geoParse = (word & 0xf) == 0 ? GeoParse::Function : GeoParse::LoopData;
+      return word;
+    case GeoParse::LoopData:
+      if (--m_geoParseCount == 0)
+        m_geoParse = GeoParse::LoopAttribute;
+      return word;
+    }
   }
   return 0x07800f0f;
 }
@@ -551,13 +633,7 @@ uint32_t CModel2::GeoFeed(bool command)
 UINT32 CModel2::GeoSHARCRead(UINT32 addr)
 {
   if (addr >= 0x400000 && addr < 0x410000)
-  {
-    // A jump is only a jump where a command is read (data words may have bit
-    // 31 set): Fighting Vipers' program reads commands, and only commands,
-    // with R0 = DM(M0, I0)
-    bool command = m_geoSharc.ReadProgramWord(m_geoSharc.GetPC()) == 0x403E00000000ULL;
-    return GeoFeed(command);
-  }
+    return GeoFeed();
   if (addr == 0x430001)
   {
     if (m_geoROMAddress & 0x00800000)
@@ -571,15 +647,11 @@ void CModel2::GeoSHARCWrite(UINT32 addr, UINT32 data)
 {
   if (addr >= 0x410000 && addr < 0x420000)
   {
-    // FF000000 is the end command's padding, but also a marked command 0 (Last
-    // Bronx's command 1 with a zero count sends one mid-list): the end is a
-    // second one with no display list word read since the first
-    if (data == 0xff000000)
-    {
-      if (m_geoFFFeedCount == m_geoFeedCount)
-        m_geoEndSeen = true;
-      m_geoFFFeedCount = m_geoFeedCount;
-    }
+    // FF000000 is the end function's padding, but also a marked command 0
+    // (Last Bronx's command 1 with a zero count sends one mid-list): the frame
+    // ends at the first one after the end function was fed
+    if (data == 0xff000000 && m_geoEndFed)
+      m_geoEndSeen = true;
     else if (data == 0xff00000f)
       m_geoParked = true;
     m_video3d.RasterPush(data);
@@ -717,7 +789,8 @@ void CModel2::RunGeometrizer()
 
   // The display list: until the end command pads the output
   m_geoEndSeen = false;
-  m_geoFFFeedCount = ~0u;
+  m_geoEndFed = false;
+  m_geoParse = GeoParse::Function;
   m_geoSharc.SetFlagInput(0, false);
   int listCycles = 0;
   for (; listCycles < BUDGET && !m_geoEndSeen && !m_geoSharc.IsFatalHalted(); listCycles += SLICE)
@@ -766,6 +839,18 @@ uint32_t CModel2::GeoRead(uint32_t offset)
 void CModel2::GeoWrite(uint32_t offset, uint32_t data)
 {
   uint32_t address = offset * 4;
+  // The function table: command length (7 bits) at 4, data length (8 bits,
+  // bit 7 LOOP) at 8, for each function n at 0x10 n
+  if (address < 0x400 && (address & 0xf) == 4)
+  {
+    m_geoCommandLength[address >> 4] = uint8_t(data & 0x7f);
+    return;
+  }
+  if (address < 0x400 && (address & 0xf) == 8)
+  {
+    m_geoDataLength[address >> 4] = uint8_t(data & 0xff);
+    return;
+  }
   if (address < 0x1000)
   {
     uint32_t function = (address >> 4) & 0x3f;
@@ -2788,6 +2873,7 @@ void CModel2::Reset(void)
   }
   m_geoWriteAddress = 0;
   m_geoReadAddress = 0;
+  GeoDefaultLengths(m_geoCommandLength, m_geoDataLength);
   m_coproBank = 0;
   m_coproSinCosBase = m_coproInvBase = m_coproISqrtBase = 0;
   std::fill(std::begin(m_coproAtanBase), std::end(m_coproAtanBase), 0);
@@ -2910,6 +2996,9 @@ void CModel2::SaveState(CBlockFile *SaveState)
     SaveState->NewBlock("Model 2 geometrizer", __FILE__);
     WriteVector(SaveState, m_geoPolyRAM);
     SaveState->Write(m_geoROMAddress);
+    SaveState->NewBlock("Model 2 geometrizer function table", __FILE__);
+    SaveState->Write(m_geoCommandLength);
+    SaveState->Write(m_geoDataLength);
     // Which geometrizer made the state: the program's SHARC state only exists
     // with the low level one, so the two can't load each other's states
     SaveState->NewBlock("Model 2 geometrizer mode", __FILE__);
@@ -3059,6 +3148,14 @@ void CModel2::LoadState(CBlockFile *SaveState)
       ReadVector(SaveState, m_geoPolyRAM);
       SaveState->Read(m_geoROMAddress);
     }
+    // (states saved before it was kept: the 2B games' table, merged)
+    if (Result::OKAY == SaveState->FindBlock("Model 2 geometrizer function table"))
+    {
+      SaveState->Read(m_geoCommandLength);
+      SaveState->Read(m_geoDataLength);
+    }
+    else
+      GeoDefaultLengths(m_geoCommandLength, m_geoDataLength);
   }
   m_tiles.LoadState(SaveState);
   m_video3d.LoadState(SaveState);
