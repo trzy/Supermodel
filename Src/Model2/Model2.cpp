@@ -571,8 +571,15 @@ void CModel2::GeoSHARCWrite(UINT32 addr, UINT32 data)
 {
   if (addr >= 0x410000 && addr < 0x420000)
   {
+    // FF000000 is the end command's padding, but also a marked command 0 (Last
+    // Bronx's command 1 with a zero count sends one mid-list): the end is a
+    // second one with no display list word read since the first
     if (data == 0xff000000)
-      m_geoEndSeen = true;
+    {
+      if (m_geoFFFeedCount == m_geoFeedCount)
+        m_geoEndSeen = true;
+      m_geoFFFeedCount = m_geoFeedCount;
+    }
     else if (data == 0xff00000f)
       m_geoParked = true;
     m_video3d.RasterPush(data);
@@ -710,6 +717,7 @@ void CModel2::RunGeometrizer()
 
   // The display list: until the end command pads the output
   m_geoEndSeen = false;
+  m_geoFFFeedCount = ~0u;
   m_geoSharc.SetFlagInput(0, false);
   int listCycles = 0;
   for (; listCycles < BUDGET && !m_geoEndSeen && !m_geoSharc.IsFatalHalted(); listCycles += SLICE)

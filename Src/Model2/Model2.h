@@ -319,6 +319,7 @@ private:
   uint32_t  m_geoROMAddress = 0;          // the address latched at 430000
   uint32_t  m_geoOutCount = 0;            // words output this frame (debug log)
   bool      m_geoEndSeen = false, m_geoParked = false;
+  uint32_t  m_geoFFFeedCount = ~0u;       // m_geoFeedCount at the last FF000000 output
 
   // Video
   uint32_t  m_videoControl = 0;
