@@ -1292,43 +1292,42 @@ void CModel1Render::DrawRuns(GLenum mode, const std::vector<Run> &runs, size_t b
   }
 }
 
-// The frame buffer for Transparency::Blend, the size of the target
-bool CModel1Render::EnsureBlendTarget()
+// Our frame buffer (see DrawFrame()), the size of the target
+void CModel1Render::CreateFrameTarget()
 {
-  if (m_blendFBO && m_blendWidth == m_totalXPixels && m_blendHeight == m_totalYPixels)
-    return true;
-  if (!m_blendFBO)
-  {
-    glGenFramebuffers(1, &m_blendFBO);
-    glGenTextures(1, &m_blendColor);
-    glGenRenderbuffers(1, &m_blendDepthStencil);
-  }
-  m_blendWidth = m_totalXPixels;
-  m_blendHeight = m_totalYPixels;
-  glBindTexture(GL_TEXTURE_2D, m_blendColor);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_blendWidth, m_blendHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  DestroyFrameTarget();
+  glGenFramebuffers(1, &m_frameFBO);
+  glGenTextures(1, &m_frameColor);
+  glGenRenderbuffers(1, &m_frameDepthStencil);
+  glBindTexture(GL_TEXTURE_2D, m_frameColor);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_totalXPixels, m_totalYPixels, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glBindTexture(GL_TEXTURE_2D, 0);
-  glBindRenderbuffer(GL_RENDERBUFFER, m_blendDepthStencil);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_blendWidth, m_blendHeight);
+  glBindRenderbuffer(GL_RENDERBUFFER, m_frameDepthStencil);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_totalXPixels, m_totalYPixels);
   glBindRenderbuffer(GL_RENDERBUFFER, 0);
-  glBindFramebuffer(GL_FRAMEBUFFER, m_blendFBO);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_blendColor, 0);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_blendDepthStencil);
-  bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);
+  glBindFramebuffer(GL_FRAMEBUFFER, m_frameFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_frameColor, 0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_frameDepthStencil);
+  const bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
   if (!complete)
   {
-    ErrorLog("Model 1/2 renderer: unable to create the frame buffer for blended transparency; overlapping translucent polygons will be darker.");
-    glDeleteFramebuffers(1, &m_blendFBO);
-    glDeleteTextures(1, &m_blendColor);
-    glDeleteRenderbuffers(1, &m_blendDepthStencil);
-    m_blendFBO = m_blendColor = m_blendDepthStencil = 0;
-    m_blendWidth = m_blendHeight = 0;
-    m_transparencyTargetFailed = true;
+    ErrorLog("Model 1/2 renderer: unable to create its frame buffer; drawing to the window (Transparency=2: overlapping translucent polygons are darker).");
+    DestroyFrameTarget();
   }
-  return complete;
+}
+
+void CModel1Render::DestroyFrameTarget()
+{
+  if (m_frameFBO)
+    glDeleteFramebuffers(1, &m_frameFBO);
+  if (m_frameColor)
+    glDeleteTextures(1, &m_frameColor);
+  if (m_frameDepthStencil)
+    glDeleteRenderbuffers(1, &m_frameDepthStencil);
+  m_frameFBO = m_frameColor = m_frameDepthStencil = 0;
 }
 
 void CModel1Render::DrawImage(GLuint texture, const uint32_t *pixels, int mode)
@@ -1370,12 +1369,11 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
   if (!m_ready)
     return;
 
-  // Transparency::Blend: drawn in m_blendFBO (with a stencil buffer), copied
-  // to the target at the end
-  m_blendStencil = m_transparency == Transparency::Blend && frame.valid && !frame.software
-    && !m_transparencyTargetFailed && EnsureBlendTarget();
-  if (m_blendStencil)
-    glBindFramebuffer(GL_FRAMEBUFFER, m_blendFBO);
+  // Drawn in our frame buffer (with a stencil buffer) and copied to the
+  // target at the end; in the target if there is none
+  m_blendStencil = m_transparency == Transparency::Blend && m_frameFBO != 0;
+  if (m_frameFBO)
+    glBindFramebuffer(GL_FRAMEBUFFER, m_frameFBO);
   else if (m_aaTarget)
     glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);
 
@@ -1390,14 +1388,9 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
   glDepthMask(GL_FALSE);
   glViewport(0, 0, m_totalXPixels, m_totalYPixels);
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  if (m_blendStencil)
-  {
-    glStencilMask(0xff);
-    glClearStencil(0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  }
-  else
-    glClear(GL_COLOR_BUFFER_BIT);
+  glStencilMask(0xff);
+  glClearStencil(0);
+  glClear(GL_COLOR_BUFFER_BIT | (m_frameFBO ? GL_STENCIL_BUFFER_BIT : 0));
 
   // The 4:3 area, and with wide screen the whole width: the 3D is drawn over
   // it (xMap maps native x there; the fragment shaders' native pixels still
@@ -1444,14 +1437,13 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
     }
   }
 
-  if (m_blendStencil)
+  if (m_frameFBO)
   {
     glDisable(GL_SCISSOR_TEST);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_blendFBO);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_frameFBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_aaTarget);
     glBlitFramebuffer(0, 0, m_totalXPixels, m_totalYPixels, 0, 0, m_totalXPixels, m_totalYPixels, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);
-    m_blendStencil = false;
   }
 
   if (!m_dumpFile.empty())
@@ -1525,6 +1517,7 @@ Result CModel1Render::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, un
   m_totalXPixels = totalXRes;
   m_totalYPixels = totalYRes;
   m_aaTarget = aaTarget;
+  CreateFrameTarget();
 
   // Tilemap layer scaling as CRender2D: nearest at the native resolution
   m_upscaleMode = (m_xPixels == SCREEN_WIDTH && m_yPixels == SCREEN_HEIGHT) ? UpscaleMode::Nearest : upscaleMode;
@@ -1593,10 +1586,5 @@ CModel1Render::~CModel1Render()
       glDeleteProgram(m_m2QuadProgram);
   if (m_m2Textures[0])
     glDeleteTextures(M2_NUM_BUFFERS, m_m2Textures);
-  if (m_blendFBO)
-    glDeleteFramebuffers(1, &m_blendFBO);
-  if (m_blendColor)
-    glDeleteTextures(1, &m_blendColor);
-  if (m_blendDepthStencil)
-    glDeleteRenderbuffers(1, &m_blendDepthStencil);
+  DestroyFrameTarget();
 }

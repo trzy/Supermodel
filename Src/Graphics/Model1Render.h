@@ -119,14 +119,17 @@ private:
   void SetScissor(int x1, int y1, int x2, int y2);
   void BeginTransparency();
 
-  // Transparency::Blend: overlapping translucent polygons must blend a pixel
-  // once (the hardware's checkerboard draws the same pixels again), so the
-  // frame is drawn in a frame buffer with a stencil buffer (the window's has
-  // none): an opaque polygon clears a pixel's stencil, a translucent one only
-  // blends where it is clear and sets it. The stencil state can't change
-  // within a draw, so the polygons are drawn in runs of the same kind.
+  // The frame is drawn in our own frame buffer, with a stencil buffer (the
+  // window's has none), and copied to the target at the end (falling back to
+  // drawing in the target if it can't be created). Transparency::Blend:
+  // overlapping translucent polygons must blend a pixel once (the hardware's
+  // checkerboard draws the same pixels again): an opaque polygon clears a
+  // pixel's stencil, a translucent one only blends where it is clear and sets
+  // it. The stencil state can't change within a draw, so the polygons are
+  // drawn in runs of the same kind.
   struct Run { GLint first; GLsizei count; bool translucent; };
-  bool EnsureBlendTarget();
+  void CreateFrameTarget();
+  void DestroyFrameTarget();
   void DrawRuns(GLenum mode, const std::vector<Run> &runs, size_t begin, size_t end);
   void SnapshotFrameBuffer();
   bool InitModel2();
@@ -168,10 +171,8 @@ private:
   std::string m_dumpFile;
   bool        m_wideScreen = false, m_wideBackground = false;
   Transparency m_transparency = Transparency::Original;
-  GLuint      m_blendFBO = 0, m_blendColor = 0, m_blendDepthStencil = 0;
-  unsigned    m_blendWidth = 0, m_blendHeight = 0;
-  bool        m_blendStencil = false;   // drawing this frame in m_blendFBO, with the stencil
-  bool        m_transparencyTargetFailed = false;
+  GLuint      m_frameFBO = 0, m_frameColor = 0, m_frameDepthStencil = 0;
+  bool        m_blendStencil = false;   // Transparency::Blend with the stencil (m_frameFBO)
   std::vector<Run> m_runs;
   float       m_xMap[2] = { 2.0f / 496.0f, -1.0f };   // native x to clip space x (see DrawFrame())
 };
