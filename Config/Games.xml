@@ -8785,6 +8785,59 @@
       </inputs>
     </hardware>
     <roms>
+      <!-- Hidden course: FOREST, the unused sixth course, as a fifth card in the
+           PRACTICE course select (SELECT GAME -> PRACTICE). Its card borrows the
+           Mountain card (there is no FOREST card model or artwork in the ROMs), and
+           its stage card says Mountain. Disabled by default: uncomment the
+           <patches> block below to enable it.
+           0x46AEC, 0x48474: the course table starts at 0xF1F1C, where FOREST (1)
+             already is: ring 0-4 = FOREST, Desert, Mountain, Riviera, Snowy
+           0x47420, 0x47430: five cards; 0x5Cxx-0x5Fxx, 0x599C-0x59BC, 0x56F8: the ring
+             angle to index, its wrap at 5 and the settle angle; 0x58E8-0x595C: clear
+             five highlight flags; 0x5198: card 4 starts highlighted like the others
+           0x5404, 0x57D8, 0x5AE0: per-course 2D image table read one word lower
+           0x6078, 0x6080, 0xE9768-0xE977C: card model tables with a fifth entry
+             (moved into an assert message string)
+           0xE97EC, 0xE9814: 72 degrees between cards -->
+      <!--
+      <patches>
+        <patch region="crom" bits="32" offset="0x5198" value="0x9009d434" />
+        <patch region="crom" bits="32" offset="0x5404" value="0x39210014" />
+        <patch region="crom" bits="32" offset="0x56f8" value="0x20000005" />
+        <patch region="crom" bits="32" offset="0x57d8" value="0x39210014" />
+        <patch region="crom" bits="32" offset="0x58e8" value="0x39400004" />
+        <patch region="crom" bits="32" offset="0x58ec" value="0x39600010" />
+        <patch region="crom" bits="32" offset="0x5958" value="0x39400004" />
+        <patch region="crom" bits="32" offset="0x595c" value="0x38000010" />
+        <patch region="crom" bits="32" offset="0x599c" value="0x2c8b0005" />
+        <patch region="crom" bits="32" offset="0x59bc" value="0x5529077a" />
+        <patch region="crom" bits="32" offset="0x5ae0" value="0x39210014" />
+        <patch region="crom" bits="32" offset="0x5ce8" value="0x39600005" />
+        <patch region="crom" bits="32" offset="0x5d44" value="0x2c8b0005" />
+        <patch region="crom" bits="32" offset="0x5d64" value="0x5529077a" />
+        <patch region="crom" bits="32" offset="0x5dbc" value="0x39600005" />
+        <patch region="crom" bits="32" offset="0x5e20" value="0x2c8b0005" />
+        <patch region="crom" bits="32" offset="0x5e44" value="0x5529077a" />
+        <patch region="crom" bits="32" offset="0x5ecc" value="0x39400005" />
+        <patch region="crom" bits="32" offset="0x5f28" value="0x2c8a0005" />
+        <patch region="crom" bits="32" offset="0x5f50" value="0x5529077a" />
+        <patch region="crom" bits="32" offset="0x5f70" value="0x200a0005" />
+        <patch region="crom" bits="32" offset="0x6078" value="0x3ba99768" />
+        <patch region="crom" bits="32" offset="0x6080" value="0x3bc9977c" />
+        <patch region="crom" bits="32" offset="0x46aec" value="0x39291f1c" />
+        <patch region="crom" bits="32" offset="0x47420" value="0x2c800004" />
+        <patch region="crom" bits="32" offset="0x47430" value="0x38000005" />
+        <patch region="crom" bits="32" offset="0x48474" value="0x39291f1c" />
+        <patch region="crom" bits="32" offset="0xe9768" value="0x000002e0" />
+        <patch region="crom" bits="32" offset="0xe976c" value="0x000002c5" />
+        <patch region="crom" bits="32" offset="0xe9770" value="0x000002e0" />
+        <patch region="crom" bits="32" offset="0xe9774" value="0x00000323" />
+        <patch region="crom" bits="32" offset="0xe9778" value="0x0000032a" />
+        <patch region="crom" bits="32" offset="0xe977c" value="0x000002df" />
+        <patch region="crom" bits="32" offset="0xe97ec" value="0x3fa0d97c" />
+        <patch region="crom" bits="32" offset="0xe9814" value="0x3e4ccccd" />
+      </patches>
+      -->
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20635.20" crc32="0x7937473F" />
         <file offset="2" name="epr-20634.19" crc32="0x45A09245" />
