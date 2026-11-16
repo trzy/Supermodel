@@ -347,22 +347,26 @@ inline u16 CVideo::float_to_zval(float floatval, s32 z_adjust)
 	}
 	mantissa >>= 11;
 
-	// Supermodel: negative sorts as the farthest (MAME: the nearest, 0). Only
-	// a polygon entirely behind the camera (culled), or one taking such a
-	// polygon's z ("old value"), still has one: a min z sort uses the max z
-	// when the min z is negative (see model2_3d_process_polygon)
-	if (fpint < 0)
-		return 0xffff;
-
 	// the rest depends on the exponent
+	s32 value;
 	if (exponent < -12)
-		return 0x0000; // less than -12 is too small, return 0
+		value = 0x0000; // less than -12 is too small, return 0
 	else if (exponent < 0)
-		return (mantissa | 0x1000) >> -exponent; // between -12 and 0 create a denormal with exponent of 0
+		value = (mantissa | 0x1000) >> -exponent; // between -12 and 0 create a denormal with exponent of 0
 	else if (exponent < 15)
-		return ((exponent + 1) << 12) | mantissa; // between 0 and 14 create a FP value with exponent + 1
+		value = ((exponent + 1) << 12) | mantissa; // between 0 and 14 create a FP value with exponent + 1
 	else
-		return 0xffff; // above 14 is too large
+		value = 0xffff; // above 14 is too large
+
+	// Supermodel: the z-sort mode's offset (bits 22-8 of its word; MAME ignores
+	// it) is added to the signed value, and the result clamped to 0-FFFF: a
+	// negative z (a polygon with some of it behind the camera, sorted by its
+	// min z) sorts nearest unless the offset keeps it above 0. Last Bronx and
+	// Virtual On set an offset, the other games tested none.
+	if (fpint < 0)
+		value = -value;
+	value += (z_adjust >> 8) & 0x7fff;
+	return u16(std::clamp(value, 0, 0xffff));
 }
 
 // Supermodel: at most max_out vertices are written. A convex quad clipped by
@@ -552,17 +556,9 @@ void CVideo::model2_3d_process_polygon(raster_state *raster, u32 attr)
 			zvalue = raster->polygon_z;
 			break;
 		case 1: // min z
-			// Supermodel: a polygon crossing the eye's plane (some of it behind
-			// the camera) has a negative min z. If any of it is on screen it
-			// sorts by the min z of that part (after clipping, below); until
-			// then, and for the "old value" of the next polygon if none of it
-			// is, its max z. MAME sorts it nearest (0), drawing it over
-			// everything (Indy 500's backdrop hides the track, Virtual On's
-			// floor the robot's feet); sorted farthest, or by its max z, it went
-			// behind what is in front of it (Dynamite Cop's hull alongside the
-			// camera behind the davits above it, Indy 500's catch fence near the
-			// camera behind the stands).
-			zvalue = (min_z < 0) ? max_z : min_z;
+			// (of its corners, before clipping: a negative one sorts nearest,
+			// see float_to_zval)
+			zvalue = min_z;
 			break;
 		case 2: // max z
 			zvalue = max_z;
@@ -596,20 +592,6 @@ void CVideo::model2_3d_process_polygon(raster_state *raster, u32 attr)
 		// Supermodel: polygons past the limit are dropped (MAME: fatal error)
 		if (clipped_verts > 2 && raster->poly_list_index < MAX_POLYGONS - 1)
 		{
-			// Supermodel: a min z sort of a polygon crossing the eye's plane
-			// uses the min z of its part on screen (see above)
-			if (((attr >> 10) & 3) == 1 && min_z < 0)
-			{
-				float visible_min_z = verts_out[0].pz;
-				for (int i = 1; i < clipped_verts; i++)
-					visible_min_z = std::min(visible_min_z, verts_out[i].pz);
-				if (visible_min_z >= 0)
-				{
-					zvalue = visible_min_z;
-					raster->polygon_z = zvalue;
-				}
-			}
-
 			/* adjust and set the object z-sort value */
 			object.z = float_to_zval(zvalue, raster->z_adjust);
 
