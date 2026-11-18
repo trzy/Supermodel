@@ -84,6 +84,13 @@ void CIRQ::Deassert(uint16_t irqBits)
 void CIRQ::WriteIRQEnable(UINT8 data)
 {
 	irqEnable = (unsigned) data;
+
+	// The CPU's IRQ line is high whenever an enabled IRQ is pending, so a mask
+	// write must update it: unmasking an IRQ that's already pending raises the
+	// line at once. Sega Rally 2 relies on this: the sound IRQ (the USART's TxRDY)
+	// is pending whenever the USART can take a byte, and the game unmasks it at
+	// 78670 when it has a sound command to send.
+	ppc_set_irq_line(((irqState & irqEnable) || (irqState & ~0xFF)) ? 1 : 0);
 }
 
 UINT8 CIRQ::ReadIRQEnable(void) const
