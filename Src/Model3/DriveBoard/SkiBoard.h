@@ -147,6 +147,7 @@ private:
 
   // Feedback state
   UINT8 m_lastVibrate;    // Last vibrate command sent
+  bool  m_vibration = false;  // ForceFeedback: the vibration is sent (the board answers either way)
 
   UINT8 SimulateRead(void);
 

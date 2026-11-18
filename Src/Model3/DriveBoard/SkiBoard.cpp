@@ -78,8 +78,10 @@ void CSkiBoard::Reset(void)
   CDriveBoard::Reset();
   m_lastVibrate = 0;
 
-  if (!m_config["ForceFeedback"].ValueAsDefault<bool>(false))
-    Disable();
+  // The ski board stays attached without force feedback, only its vibration
+  // is off: the game reads its status through it (the export versions stop
+  // at boot with DRIVE BOARD TROUBLE, CODE: FF, when it answers nothing)
+  m_vibration = m_config["ForceFeedback"].ValueAsDefault<bool>(false);
 
   // Stop any effects that may still be playing
   if (!IsDisabled())
@@ -231,7 +233,7 @@ void CSkiBoard::Write8(UINT32 addr, UINT8 data)
 
 void CSkiBoard::SendVibrate(UINT8 val)
 {
-  if (val == m_lastVibrate)
+  if (!m_vibration || val == m_lastVibrate)
     return;
   /*
   if (val == 0)
