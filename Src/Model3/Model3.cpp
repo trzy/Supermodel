@@ -1448,17 +1448,21 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
     // Sound Board
     case 0x08:
       //printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
-      if ((addr & 0xF) == 0)      // MIDI data port
+      if ((addr & 0xF) == 0)      // MIDI data port: the USART's transmit buffer
       {
-        SoundBoard.WriteMIDIPort(data);
+        // TxRDY comes back when the byte moves to the transmit register, a
+        // USART clock or so later (MAME's i8251, ported, does it at once): the
+        // games' handlers poll until IRQ 0x40 is clear after writing a byte
+        // (Scud Race at 1E18, Ski Champ at 99A84), so it stays clear for that
+        m_holdSoundIRQ = true;
+        m_soundWriteCycle = ppc_total_cycles();
+        m_uart.WriteData(data);
         IRQ.Deassert(0x40);
-        midiAckCycle = ppc_total_cycles();
       }
-      else if ((addr & 0xF) == 4) // MIDI control port
+      else if ((addr & 0xF) == 4) // MIDI control port: the USART's mode/command register
       {
         midiCtrlPort = data;
-        if ((data & 0x20) == 0)
-          IRQ.Deassert(0x40);
+        m_uart.WriteControl(data);
       }
       break;
 
@@ -1929,6 +1933,9 @@ void CModel3::SaveState(CBlockFile *SaveState)
   BillBoard->SaveState(SaveState);
   m_cryptoDevice.SaveState(SaveState);
   m_jtag.SaveState(SaveState);
+  m_uart.SaveState(SaveState, "Model 3 UART");
+  SaveState->NewBlock("Model 3 UART clock", __FILE__);
+  SaveState->Write(m_uartClockFrac);
 }
 
 void CModel3::LoadState(CBlockFile *SaveState)
@@ -1969,6 +1976,30 @@ void CModel3::LoadState(CBlockFile *SaveState)
   BillBoard->LoadState(SaveState);
   m_cryptoDevice.LoadState(SaveState);
   m_jtag.LoadState(SaveState);
+
+  // The MIDI port USART; states saved before it was emulated: reset, set up
+  // as the games do (x16, 8 bits, no parity, 1 stop: 4E), with their command
+  if (Result::OKAY == SaveState->FindBlock("Model 3 UART"))
+  {
+    m_uart.LoadState(SaveState, "Model 3 UART");
+    if (Result::OKAY == SaveState->FindBlock("Model 3 UART clock"))
+      SaveState->Read(m_uartClockFrac);
+  }
+  else
+  {
+    m_uart.Reset();
+    m_uart.WriteCTS(0);
+    m_uart.WriteControl(0x4E);
+    m_uart.WriteControl(midiCtrlPort);
+    m_uartClockFrac = 0;
+  }
+
+  // The sound IRQ starts held clear (see Write8): a state saved just after a
+  // byte was written, its handler polling for the IRQ to clear, carries on
+  // (the hold isn't saved); otherwise the IRQ just comes a moment later
+  m_holdSoundIRQ = true;
+  m_soundWriteCycle = ppc_total_cycles();
+  UpdateSoundIRQ();
 }
 
 void CModel3::SaveNVRAM(CBlockFile *NVRAM)
@@ -2102,6 +2133,45 @@ static unsigned GetCPUClockFrequencyInHz(const Game &game, Util::Config::Node &c
   return mhz * 1000000;
 }
 
+void CModel3::RunPPC(unsigned cycles)
+{
+  ppc_execute(cycles);
+
+  // The MIDI port USART's clock: 16 x 31.25 kbaud (the games set the 8251's x16
+  // mode, 4E), as MAME's Model 2 (the same uPD71051 to the SCSP)
+  static constexpr UINT64 UART_CLOCK = 500000;
+
+  m_uartClockFrac += UINT64(cycles) * UART_CLOCK;
+
+  const unsigned clocks = unsigned(m_uartClockFrac / m_ppcHz);
+
+  m_uartClockFrac %= m_ppcHz;
+
+  if (clocks) {
+    m_uart.Clock(clocks);
+  }
+
+  // PowerPC cycles the sound IRQ stays clear after a byte is written (see Write8)
+  static constexpr UINT64 SOUND_IRQ_HOLD_CYCLES = 1000;
+
+  if (m_holdSoundIRQ && ppc_total_cycles() - m_soundWriteCycle >= SOUND_IRQ_HOLD_CYCLES) {
+    m_holdSoundIRQ = false;
+    UpdateSoundIRQ();
+  }
+}
+
+// The sound interrupt is the USART's TxRDY (transmitter enabled, its buffer
+// empty: ready for the next byte) or RxRDY
+void CModel3::UpdateSoundIRQ()
+{
+  if ((m_uart.TxRdy() || m_uart.RxRdy()) && !m_holdSoundIRQ) {
+    IRQ.Assert(0x40);
+  }
+  else {
+    IRQ.Deassert(0x40);
+  }
+}
+
 void CModel3::RunMainBoardFrame(void)
 {
 	UINT32 start = GetTicks();
@@ -2118,6 +2188,8 @@ void CModel3::RunMainBoardFrame(void)
 	 */ 
 	unsigned ppcCycles		= GetCPUClockFrequencyInHz(m_game, m_config);
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
+
+    m_ppcHz = ppcCycles;
 
 	// Tile and palette RAM bus timing: nothing is fetched during vertical blanking
 	TileGen.SetCPUClock(ppcCycles);
@@ -2143,61 +2215,19 @@ void CModel3::RunMainBoardFrame(void)
 		GPU.BeginVBlank();
         
 		// keep running cycles until IRQ2 is acknowledged
-		// Ski Champ can hang if we check the MIDI control port too early
-		// and miss MIDI interrupts pending before the next IRQ2
 		while (IRQ.ReadIRQEnable() & 0x2 && IRQ.ReadIRQState() & 0x2 && vBlankCycles > 1000)
 		{
-			ppc_execute(1000);
+			RunPPC(1000);
             vBlankCycles -= 1000;
 		}
 
-		/*
-		* Sound:
-		*
-		* Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
-		* which are used to send MIDI commands. Often games will write 0x27, send
-		* a series of commands, and write 0x06 to stop. Other games, like Star
-		* Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
-		* by writing 0x37 and will disable/enable interrupts to control command
-		* output.
-		*/
-		//printf("\t-- BEGIN (Ctrl=%02X, IRQEn=%02X, IRQPend=%02X) --\n", midiCtrlPort, IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
-		int irqCount = 0;
-		while ((midiCtrlPort & 0x20))
-			//while (midiCtrlPort == 0x27)  // 27 triggers IRQ sequence, 06 stops it
+		// The rest of vblank, a line at a time (the USART is clocked with the PowerPC)
+		while (vBlankCycles)
 		{
-			// Don't waste time firing MIDI interrupts if game has disabled them
-			if ((IRQ.ReadIRQEnable() & 0x40) == 0)
-				break;
-
-            // PowerPC cycles to allow after a MIDI byte is written before IRQ 0x40 can be asserted again
-            static const UINT64 MIDI_IRQ_MIN_CYCLES = 1000;
-
-			// On the sound board the MIDI interrupt only comes back once the previous byte has been sent, long after
-			// the PowerPC acknowledged it by writing that byte. Games return from the interrupt by polling until IRQ
-			// 0x40 is clear (Scud Race at 1DB0), so asserting it again before the handler has got there leaves the
-			// PowerPC spinning forever. Give it time to finish the handler first.
-			const UINT64 sinceAck = ppc_total_cycles() - midiAckCycle;
-			if (sinceAck < MIDI_IRQ_MIN_CYCLES)
-			{
-				const unsigned wait = (unsigned)(MIDI_IRQ_MIN_CYCLES - sinceAck);
-				ppc_execute(wait);
-				vBlankCycles -= std::min(wait, vBlankCycles);
-			}
-
-			// Process MIDI interrupt
-			IRQ.Assert(0x40);
-			ppc_execute(1000); // give PowerPC time to acknowledge IR
-            vBlankCycles -= 1000;
-
-			++irqCount;
-			if (irqCount > 128)
-			{
-				break;
-			}
+			const unsigned cycles = std::min(vBlankCycles, lineCycles);
+			RunPPC(cycles);
+			vBlankCycles -= cycles;
 		}
-
-        ppc_execute(vBlankCycles);
 
 		IRQ.Assert(0x0D);
 
@@ -2221,7 +2251,7 @@ void CModel3::RunMainBoardFrame(void)
 
         TileGen.DrawLine(i);
         TileGen.BeginBusLine(ppc_total_cycles());
-        ppc_execute(lineCycles);
+        RunPPC(lineCycles);
     }
 
 	timings.ppcTicks = GetTicks() - start;
@@ -2669,11 +2699,15 @@ void CModel3::Reset(void)
 
   // MIDI
   midiCtrlPort = 0;
-  midiAckCycle = 0;
 
   // Reset all devices
   ppc_reset();
   IRQ.Reset();
+  m_uart.Reset();
+  m_uart.WriteCTS(0);   // CTS active: the transmitter runs when enabled
+  m_uartClockFrac = 0;
+  m_holdSoundIRQ = false;
+  m_soundWriteCycle = 0;
   PCIBridge.Reset();
   PCIBus.Reset();
   SCSI.Reset();
@@ -2802,6 +2836,9 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
     return Result::FAIL;
   if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI,Real3DConfig::Model3(game.stepping))) // same for Real3D DMA interrupt
     return Result::FAIL;
+  m_uart.OnTransmit = [this](uint8_t data) { SoundBoard.WriteMIDIPort(data); };
+  m_uart.OnTxRdy = [this](bool) { UpdateSoundIRQ(); };
+  m_uart.OnRxRdy = [this](bool) { UpdateSoundIRQ(); };
   if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
     return Result::FAIL;
 
@@ -3108,7 +3145,6 @@ CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs,
   adcChannel = 0;
 
   midiCtrlPort = 0;
-  midiAckCycle = 0;
   driveROM = nullptr;
   OutputRegister[0] = OutputRegister[1] = 0;
   cromBankReg = 0;

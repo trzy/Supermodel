@@ -39,6 +39,7 @@
 #include "Real3D.h"
 #include "RTC72421.h"
 #include "SoundBoard.h"
+#include "Model1/I8251.h"
 #include "TileGen.h"
 #include "DriveBoard/DriveBoard.h"
 #include "Model3/BillBoard.h"
@@ -244,9 +245,17 @@ private:
   int     adcChannel;
   bool    m_lostWorldReloaded[2] = {};
 
-  // MIDI port
-  UINT8   midiCtrlPort; // controls MIDI (SCSP) IRQ behavior
-  UINT64  midiAckCycle; // PowerPC cycle (ppc_total_cycles()) when the last MIDI byte was written, acknowledging IRQ 0x40
+  // MIDI port: the main board's uPD71051 USART (an 8251), transmitting the
+  // sound commands to the sound board's SCSP (MIDI in) at 31.25 kbaud. Its
+  // TxRDY (and RxRDY) is the sound interrupt (IRQ 0x40).
+  UINT8   midiCtrlPort; // the last command written (kept in save states; rebuilds the USART from older ones)
+  CI8251  m_uart;
+  UINT64  m_uartClockFrac = 0;  // USART clock: UART_CLOCK x PowerPC cycles run, modulo m_ppcHz
+  unsigned m_ppcHz = 1;         // PowerPC clock this frame
+  bool    m_holdSoundIRQ = false;   // a byte was just written: the sound IRQ is held clear for a while
+  UINT64  m_soundWriteCycle = 0;    // ppc_total_cycles() when it was written
+  void    RunPPC(unsigned cycles);  // runs the PowerPC, then clocks the USART for that time
+  void    UpdateSoundIRQ();
 
   // Emulated core Model 3 memory regions
   UINT8   *memoryPool;  // single allocated region for all ROM and system RAM
