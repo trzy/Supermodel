@@ -225,6 +225,7 @@ private:
   uint8_t IORead(unsigned offset);
   uint8_t RailChase2DriveRead() const;
   void IOWrite(unsigned offset, uint8_t data);
+  void LampOutputWrite(uint8_t data);
   void EEPROMWrite(uint8_t data);
   uint8_t In0Read();
 

@@ -1063,6 +1063,21 @@ uint8_t CModel2::IORead(unsigned offset)
   }
 }
 
+// The I/O board's port F: coin counters (bits 0-1) and lamps (bits 2-7, MAME's
+// lamp_output_w), as Model 3's outputs
+void CModel2::LampOutputWrite(uint8_t data)
+{
+  if (!m_outputs)
+    return;
+  m_outputs->SetValue(OutputLampStart, !!(data & 0x04));
+  m_outputs->SetValue(OutputLampView1, !!(data & 0x08));
+  m_outputs->SetValue(OutputLampView2, !!(data & 0x10));
+  m_outputs->SetValue(OutputLampView3, !!(data & 0x20));
+  m_outputs->SetValue(OutputLampView4, !!(data & 0x40));
+  m_outputs->SetValue(OutputLampLeader, !!(data & 0x80));
+  m_outputs->SetValue(OutputRawLamps, data);
+}
+
 void CModel2::IOWrite(unsigned offset, uint8_t data)
 {
   switch (offset)
@@ -1077,20 +1092,10 @@ void CModel2::IOWrite(unsigned offset, uint8_t data)
       m_wheelBoard->Write(data);    // port E: wheel drive board command
     else if (offset == 4 && m_billBoard)
       m_billBoard->Write(data);     // port E: billboard command
-    // Port F: lamps (bits 2-7) and coin counters (MAME's lamp_output_w), as
-    // Model 3's outputs
     if (m_outputs && offset == 4)
       m_outputs->SetValue(OutputRawDrive, data);
-    else if (m_outputs && offset == 5)
-    {
-      m_outputs->SetValue(OutputLampStart, !!(data & 0x04));
-      m_outputs->SetValue(OutputLampView1, !!(data & 0x08));
-      m_outputs->SetValue(OutputLampView2, !!(data & 0x10));
-      m_outputs->SetValue(OutputLampView3, !!(data & 0x20));
-      m_outputs->SetValue(OutputLampView4, !!(data & 0x40));
-      m_outputs->SetValue(OutputLampLeader, !!(data & 0x80));
-      m_outputs->SetValue(OutputRawLamps, data);
-    }
+    else if (offset == 5)
+      LampOutputWrite(data);        // port F: lamps
     break;
   case 0x08:
     m_io.portConfig = data;
@@ -2518,9 +2523,12 @@ void CModel2::UpdateIOBoard(const uint8_t (&an)[8], uint8_t in0, uint8_t in1, ui
   m_dpram[10] = (uint8_t) ~in2;
   // the board's DIP switches (MAME: three banks, all off)
   m_dpram[0x0B] = m_dpram[0x0C] = m_dpram[0x0D] = 0xFF;
-  // a fourth input port (Desert Tank reads it at boot; 0 there keeps it in
-  // test mode): nothing pressed
-  m_dpram[0x0E] = m_dpram[0x0F] = 0xFF;
+  // a fourth input port, the board's port G (Desert Tank reads it at boot; 0
+  // there keeps it in test mode): nothing pressed
+  m_dpram[0x0E] = 0xFF;
+  // Byte 0F is the other way: the game's lamps, which the board's firmware
+  // (epr-14869c at 016E) copies to its port F
+  LampOutputWrite(m_dpram[0x0F]);
   // Light guns (Virtua Cop's model1io2 board; MAME's fpga_r 0-8, which its
   // BIOS copies to 80-88): P1 Y, P1 X, P2 Y, P2 X (16 bits, little endian),
   // then the off-screen bits (0: P1, 1: P2)
