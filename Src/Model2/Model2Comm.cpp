@@ -74,6 +74,9 @@ void CModel2Comm::ConnectProc()
     if (m_quit)
       return;
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    // The next machine closes the connection if our join reaches it before
+    // its own link exists (its server starts first): connect again
+    m_link->Connect();
   }
   InfoLog("Model 2 communication board: connected.");
   m_connected = true;
