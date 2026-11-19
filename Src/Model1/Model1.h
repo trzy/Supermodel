@@ -56,6 +56,7 @@
 #include "Model1/Model1Geometrizer.h"
 #include "Model1/Model1Tilemap.h"
 #include "Model1/I8251.h"
+#include "Model1/Model1Comm.h"
 #include "Graphics/Model1Render.h"
 #include "Game.h"
 #include "Util/NewConfig.h"
@@ -100,7 +101,7 @@ public:
   UINT32 ReadIO(UINT16 addr) override;
   void WriteIO(UINT16 addr, UINT32 v) override;
 
-  CModel1(Util::Config::Node &config, CInputs *inputs, COutputs *outputs);
+  CModel1(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server = nullptr);
   ~CModel1(void);
 
 private:
@@ -170,6 +171,7 @@ private:
   Util::Config::Node &m_config;
   CInputs   *m_inputs;
   COutputs  *m_outputs;
+  std::shared_ptr<CNetServer> m_server;
   Game      m_game;
 
   // Devices
@@ -207,7 +209,7 @@ private:
   std::vector<uint16_t> m_paletteRAM;     // 0x900000, 0x2000 words
   std::vector<uint16_t> m_colorXlat;      // 0x910000, 0x6000 words
   std::vector<uint8_t>  m_dpram;          // 0xC00000, 2 KB dual port RAM shared with the I/O board
-  std::vector<uint16_t> m_commRAM;        // 0xB00000, communication board shared memory (not emulated)
+  CModel1Comm           m_comm;           // 0xB00000, communication board (Virtua Racing, Virtua Formula, Wing War)
   unsigned              m_bank = 0;
 
   // Coprocessor

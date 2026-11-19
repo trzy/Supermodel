@@ -606,9 +606,16 @@ uint16_t CModel1::ReadWord(uint32_t addr, uint16_t mask)
       return m_colorXlat[(addr - 0x910000) >> 1];
     break;
   case 0xB:
-    // Communication board shared memory: as RAM (the board isn't emulated)
-    if (addr < 0xB01004 && (m_game.name == "vr" || m_game.name == "vformula" || m_game.parent == "vr" || m_game.name.compare(0, 7, "wingwar") == 0))
-      return m_commRAM[(addr & 0x1FFF) >> 1];
+    // Communication board: shared memory (bytes, 16 bits at a time), CN, FG
+    if (m_game.netboard_present)
+    {
+      if (addr < 0xB01000)
+        return m_comm.ReadShared(addr & 0xFFF) | (m_comm.ReadShared((addr & 0xFFF) + 1) << 8);
+      if (addr == 0xB01000)
+        return 0xFF00 | m_comm.ReadCN();
+      if (addr == 0xB01002)
+        return 0xFF00 | m_comm.ReadFG();
+    }
     break;
   case 0xC:
     if (addr < 0xC01000)
@@ -697,10 +704,19 @@ void CModel1::WriteWord(uint32_t addr, uint16_t data, uint16_t mask)
     }
     return;
   case 0xB:
-    if (addr < 0xB01004)
+    if (m_game.netboard_present)
     {
-      uint16_t &w = m_commRAM[(addr & 0x1FFF) >> 1];
-      w = Combine(w, data, mask);
+      if (addr < 0xB01000)
+      {
+        if (mask & 0x00FF)
+          m_comm.WriteShared(addr & 0xFFF, (uint8_t) data);
+        if (mask & 0xFF00)
+          m_comm.WriteShared((addr & 0xFFF) + 1, (uint8_t) (data >> 8));
+      }
+      else if (addr == 0xB01000 && (mask & 0x00FF))
+        m_comm.WriteCN((uint8_t) data);
+      else if (addr == 0xB01002 && (mask & 0x00FF))
+        m_comm.WriteFG((uint8_t) data);
     }
     return;
   case 0xC:
@@ -1302,6 +1318,9 @@ void CModel1::RunFrame(void)
       m_geometry.VBlank(m_frameNumber);
       if (!(m_irqMask & 0x02))
         IRQRaise(1);
+      // The communication board's vblank tick (MAME's comm_tick)
+      if (m_game.netboard_present)
+        m_comm.Tick();
     }
     RunLine();
   }
@@ -1359,6 +1378,7 @@ void CModel1::Reset(void)
   m_irqMask = 0xFF;
   m_v60.SetIRQLine(false);
   m_uart.Reset();
+  m_comm.Reset();
   m_uart.WriteCTS(0);
   CoproReset();
 
@@ -1422,7 +1442,15 @@ void CModel1::SaveState(CBlockFile *SaveState)
   WriteVector(SaveState, m_paletteRAM);
   WriteVector(SaveState, m_colorXlat);
   WriteVector(SaveState, m_dpram);
-  WriteVector(SaveState, m_commRAM);
+  // Where the communication board's memory was kept as RAM (8 KB) before
+  // the board was emulated: its shared memory, for states loaded by older
+  // versions. The board itself is in its own block.
+  {
+    std::vector<uint16_t> commRAM(0x2000 / 2, 0);
+    for (unsigned i = 0; i < 0x800; i++)
+      commRAM[i] = m_comm.ReadShared(i * 2) | (m_comm.ReadShared(i * 2 + 1) << 8);
+    WriteVector(SaveState, commRAM);
+  }
   SaveState->Write(&m_bank, sizeof(m_bank));
 
   // The FIFOs (MAME doesn't save them, and hopes they are empty)
@@ -1473,6 +1501,8 @@ void CModel1::SaveState(CBlockFile *SaveState)
   m_uart.SaveState(SaveState, "Model 1 UART");
   if (m_soundBoard)
     m_soundBoard->SaveState(SaveState);
+  if (m_game.netboard_present)
+    m_comm.SaveState(SaveState);
 }
 
 void CModel1::LoadState(CBlockFile *SaveState)
@@ -1489,7 +1519,10 @@ void CModel1::LoadState(CBlockFile *SaveState)
   ReadVector(SaveState, m_paletteRAM);
   ReadVector(SaveState, m_colorXlat);
   ReadVector(SaveState, m_dpram);
-  ReadVector(SaveState, m_commRAM);
+  // The communication board's shared memory as it was kept before the board
+  // was emulated (the board's own block, if any, replaces it below)
+  std::vector<uint16_t> commRAM(0x2000 / 2, 0);
+  ReadVector(SaveState, commRAM);
   unsigned bank = 0;
   SaveState->Read(&bank, sizeof(bank));
   SetBank(bank);
@@ -1558,6 +1591,24 @@ void CModel1::LoadState(CBlockFile *SaveState)
   m_uart.LoadState(SaveState, "Model 1 UART");
   if (m_soundBoard)
     m_soundBoard->LoadState(SaveState);
+  if (m_game.netboard_present)
+  {
+    if (Result::OKAY == SaveState->FindBlock("Model 1 comm"))
+      m_comm.LoadState(SaveState);
+    else
+    {
+      // Saved before the board was emulated: its memory, the board reset
+      m_comm.Reset();
+      for (unsigned i = 0; i < 0x800; i++)
+      {
+        m_comm.WriteShared(i * 2, (uint8_t) commRAM[i]);
+        m_comm.WriteShared(i * 2 + 1, (uint8_t) (commRAM[i] >> 8));
+      }
+      // CN (B01000) and FG (B01002), kept as RAM then
+      m_comm.WriteCN((uint8_t) commRAM[0x800]);
+      m_comm.WriteFG((uint8_t) commRAM[0x801]);
+    }
+  }
 }
 
 // NVRAM: RAM A (battery backed) and the dual port RAM area where the I/O
@@ -1705,7 +1756,12 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
   m_palette.assign(0x4000 / 2, 0xFF000000);
   m_colorXlat.assign(0xC000 / 2, 0);
   m_dpram.assign(0x800, 0xFF);
-  m_commRAM.assign(0x2000 / 2, 0);
+  // The communication board: linked to the next machine with the network on
+  // (the Network options, as Model 2's and the Model 3 net board), else to
+  // itself
+  if (m_game.netboard_present)
+    m_comm.Init(m_server, m_config["AddressOut"].ValueAs<std::string>(), (uint16_t) m_config["PortOut"].ValueAs<unsigned>(),
+                m_config["Model1CommFrameSync"].ValueAsDefault<bool>(false));
   m_coproRAM.assign(0x2000, 0);
 
   m_ioBus.board = this;
@@ -1815,6 +1871,8 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
   std::set<std::string> extra_hw;
   if (m_dsb)
     extra_hw.insert("Digital Sound Board (Type 1)");
+  if (game.netboard_present)
+    extra_hw.insert("Communication Board");
   if (!game.version.empty())
     std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
   else
@@ -1832,10 +1890,11 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
   return Result::OKAY;
 }
 
-CModel1::CModel1(Util::Config::Node &config, CInputs *inputs, COutputs *outputs)
+CModel1::CModel1(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server)
   : m_config(config),
     m_inputs(inputs),
     m_outputs(outputs),
+    m_server(server),
     m_tiles(0x3FFF)
 {
 }

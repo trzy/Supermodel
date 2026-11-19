@@ -369,6 +369,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Model3\TileGen.cpp" />
     <ClCompile Include="..\Src\Pro1000\Pro1000.cpp" />
     <ClCompile Include="..\Src\Model1\Model1.cpp" />
+    <ClCompile Include="..\Src\Model1\Model1Comm.cpp" />
     <ClCompile Include="..\Src\Model1\Model1Geometry.cpp" />
     <ClCompile Include="..\Src\Model1\Model1Geometrizer.cpp" />
     <ClCompile Include="..\Src\Model1\Model1Tilemap.cpp" />
@@ -573,6 +574,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Model3\TileGen.h" />
     <ClInclude Include="..\Src\Pro1000\Pro1000.h" />
     <ClInclude Include="..\Src\Model1\Model1.h" />
+    <ClInclude Include="..\Src\Model1\Model1Comm.h" />
     <ClInclude Include="..\Src\Model1\Model1Geometry.h" />
     <ClInclude Include="..\Src\Model1\Model1Geometrizer.h" />
     <ClInclude Include="..\Src\Model1\Model1Tilemap.h" />

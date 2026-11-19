@@ -2651,7 +2651,7 @@ int main(int argc, char **argv)
   if (game.platform == Game::PLATFORM_PRO1000)
     Emu = new CPro1000(s_runtime_config, consoleInput ? consoleInput->CreateInput() : nullptr, netServer);
   else if (game.platform == Game::PLATFORM_MODEL1)
-    Emu = new CModel1(s_runtime_config, Inputs, Outputs);
+    Emu = new CModel1(s_runtime_config, Inputs, Outputs, netServer);
   else if (game.platform == Game::PLATFORM_MODEL2)
     Emu = new CModel2(s_runtime_config, Inputs, Outputs, netServer);
   else

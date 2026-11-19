@@ -122,6 +122,7 @@ SRC_FILES = \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \
 	Src/Model1/Model1.cpp \
+	Src/Model1/Model1Comm.cpp \
 	Src/Model1/Model1Geometry.cpp \
 	Src/Model1/Model1Geometrizer.cpp \
 	Src/Model1/Model1Tilemap.cpp \
