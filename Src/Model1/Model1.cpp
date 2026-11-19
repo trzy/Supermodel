@@ -947,19 +947,33 @@ void CModel1::UpdateInputs(void)
   m_dpram[9] = (uint8_t) ~in1;
   m_dpram[10] = (uint8_t) ~in2;
 
-  // Byte 0F: the game's lamps, which the board's firmware (epr-14869c at 016E)
-  // copies to its port F: coin counters (bits 0-1), start, VR1-4 and leader
-  // (bits 2-7, MAME's lamp_output_w), as Model 3's outputs. The firmware
+  // Byte 0F: the game's outputs, which the board's firmware (epr-14869c at
+  // 016E) copies to its port F, all as RawLamps. Bits 0-1 are the coin
+  // counters; the rest differ per game (MAME's *_outputs_w):
+  //   Virtua Racing, V-Formula: 2 start, 3-6 VR1-4, 7 race leader
+  //   Wing War: 2 start, 3-6 view 1-4
+  //   Virtua Fighter: 2 start 1, 3 start 2
+  //   Star Wars Arcade: 2 start, 4 VR, 6 unknown (1 in game)
+  //   Wing War R360: 2 start, 3 danger
+  //   NetMerc: 2 trigger/thumb motor, 3 MVD holder light, 4-5 MVD backlights
+  // so only those that are Model 3's lamps are named as them. The firmware
   // holds port F at 0 while it boots.
   if (m_outputs)
   {
     const uint8_t lamps = m_ioBoardBootFrames > 0 ? 0 : m_dpram[0x0F];
-    m_outputs->SetValue(OutputLampStart, !!(lamps & 0x04));
-    m_outputs->SetValue(OutputLampView1, !!(lamps & 0x08));
-    m_outputs->SetValue(OutputLampView2, !!(lamps & 0x10));
-    m_outputs->SetValue(OutputLampView3, !!(lamps & 0x20));
-    m_outputs->SetValue(OutputLampView4, !!(lamps & 0x40));
-    m_outputs->SetValue(OutputLampLeader, !!(lamps & 0x80));
+    const bool vr = m_game.name == "vr" || m_game.parent == "vr";
+    const bool views = vr || (m_game.name.compare(0, 7, "wingwar") == 0 && m_game.name != "wingwar360");
+    if (m_game.name != "netmerc")
+      m_outputs->SetValue(OutputLampStart, !!(lamps & 0x04));
+    if (views)
+    {
+      m_outputs->SetValue(OutputLampView1, !!(lamps & 0x08));
+      m_outputs->SetValue(OutputLampView2, !!(lamps & 0x10));
+      m_outputs->SetValue(OutputLampView3, !!(lamps & 0x20));
+      m_outputs->SetValue(OutputLampView4, !!(lamps & 0x40));
+    }
+    if (vr)
+      m_outputs->SetValue(OutputLampLeader, !!(lamps & 0x80));
     m_outputs->SetValue(OutputRawLamps, lamps);
   }
 
