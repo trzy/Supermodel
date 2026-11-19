@@ -553,6 +553,9 @@ void CSimNetBoard::ConnectProc(void)
 		if (m_quit)
 			return;
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		// The next machine closes the connection if our join reaches it before
+		// its own link exists (its server starts first): connect again
+		m_link->Connect();
 	}
 
 	printf("Successfully connected.\n");

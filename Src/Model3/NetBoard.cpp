@@ -665,6 +665,9 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			switch (d & 0xff)
 			{
 			case 0x80:
+				// The next machine closes the connection if our join reached it
+				// before its own link existed: connect again (nothing if open)
+				m_link->Connect();
 				m_link->Send((const char*)CommRAM + send_offset, send_size);
 				DebugLog("send enable off=%x size=%x\n", send_offset, send_size);
 
