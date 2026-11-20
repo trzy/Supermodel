@@ -85,20 +85,26 @@ static const char s_quadFragmentShader[] = R"glsl(
 uniform vec2 screenSize;                  // 496, 384
 uniform vec4 viewport;                    // x, y, width, height of the viewable area in the frame buffer
 
-uniform int transparency;                 // moire: 0 = output pixel checkerboard, 1 = native grid checkerboard, 2 = blended
+uniform int transparency;                 // moire: 0 = output pixel checkerboard, 1 = native grid checkerboard, 2 = blended,
+                                          // 3 = blended in linear light (DrawRuns())
 
 in vec4 fsColor;
 flat in float fsMoire;
 
 out vec4 fragColor;
 
+vec3 SrgbToLinear(vec3 c)
+{
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
+
 void main(void)
 {
   if (fsMoire > 0.5)
   {
-    if (transparency == 2)
+    if (transparency >= 2)
     {
-      fragColor = vec4(fsColor.rgb, 0.5);
+      fragColor = vec4(transparency == 3 ? SrgbToLinear(fsColor.rgb) : fsColor.rgb, 0.5);
       return;
     }
     // checkerboard: MAME draws pixels where (x ^ y) & 1 == 0, y down. On the
@@ -274,7 +280,8 @@ static const char s_m2FragmentShader[] = R"glsl(
 
 uniform vec2 screenSize;                  // 496, 384
 uniform vec4 viewport;                    // x, y, width, height of the viewable area in the frame buffer
-uniform int  transparency;                // checkerboard: 0 = output pixels, 1 = native grid, 2 = blended
+uniform int  transparency;                // checkerboard: 0 = output pixels, 1 = native grid, 2 = blended,
+                                          // 3 = blended in linear light (DrawRuns())
 uniform usampler2D     texRAM0;           // texture RAM 0: 2x2 texel blocks, a mip level per hardware level
 uniform usampler2D     texRAM1;           // texture RAM 1
 uniform usamplerBuffer lumaRAM;           // 8-bit
@@ -451,13 +458,21 @@ uint gammaOf(uint i) { return texelFetch(gammaTable, int(i)).r; }
 
 float outAlpha = 1.0;                     // 0.5: a checkerboard polygon, blended
 
+vec3 SrgbToLinear(vec3 c)
+{
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
+
 vec4 shade(uint color, uint luma)
 {
   // 6 bits of luma and 5 bits per colour component index the colour tables
   uint r = gammaOf(xlat(0x0000u + (((color >>  0) & 0x1fu) << 8) + luma));
   uint g = gammaOf(xlat(0x2000u + (((color >>  5) & 0x1fu) << 8) + luma));
   uint b = gammaOf(xlat(0x4000u + (((color >> 10) & 0x1fu) << 8) + luma));
-  return vec4(vec3(float(r), float(g), float(b)) / 255.0, outAlpha);
+  vec3 c = vec3(float(r), float(g), float(b)) / 255.0;
+  if (outAlpha < 1.0 && transparency == 3)   // linear, for the sRGB blend (DrawRuns())
+    c = SrgbToLinear(c);
+  return vec4(c, outAlpha);
 }
 
 void main(void)
@@ -483,7 +498,7 @@ void main(void)
   // the native grid), or of the native grid; or the polygon is blended 50%
   if (((th0 >> 15) & 1u) != 0u)
   {
-    if (transparency == 2)
+    if (transparency >= 2)
       outAlpha = 0.5;
     else
     {
@@ -1024,7 +1039,7 @@ void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, c
     glUniform2f(m_m2QuadScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
     glUniform4f(m_m2QuadViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
     glUniform2f(m_m2QuadXMapLoc, m_xMap[0], m_xMap[1]);
-    glUniform1i(m_m2QuadTransparencyLoc, int(m_transparency));
+    glUniform1i(m_m2QuadTransparencyLoc, m_blendStencil ? 3 : int(m_transparency));   // 3: blend in linear light (DrawRuns())
     DrawRuns(GL_LINES_ADJACENCY, m_runs, 0, m_runs.size());
     glUseProgram(0);
   }
@@ -1034,7 +1049,7 @@ void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, c
     glUniform2f(m_m2ScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
     glUniform4f(m_m2ViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
     glUniform2f(m_m2XMapLoc, m_xMap[0], m_xMap[1]);
-    glUniform1i(m_m2TransparencyLoc, int(m_transparency));
+    glUniform1i(m_m2TransparencyLoc, m_blendStencil ? 3 : int(m_transparency));   // 3: blend in linear light (DrawRuns())
     DrawRuns(GL_TRIANGLES, m_runs, 0, m_runs.size());
     m_m2Shader.DisableShader();
   }
@@ -1244,7 +1259,7 @@ void CModel1Render::DrawBatches(const Model1::Frame &frame, const std::vector<Mo
   glUniform2f(m_quadScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
   glUniform4f(m_quadViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
   glUniform2f(m_quadXMapLoc, m_xMap[0], m_xMap[1]);
-  glUniform1i(m_quadTransparencyLoc, int(m_transparency));
+  glUniform1i(m_quadTransparencyLoc, m_blendStencil ? 3 : int(m_transparency));   // 3: blend in linear light (DrawRuns())
   BeginTransparency();
 
   glEnable(GL_SCISSOR_TEST);
@@ -1265,7 +1280,9 @@ void CModel1Render::DrawBatches(const Model1::Frame &frame, const std::vector<Mo
 
 // The runs [begin, end): with the stencil (Transparency::Blend), an opaque
 // run clears the stencil where it draws, a translucent one only draws where
-// it is clear and sets it
+// it is clear and sets it. Translucent runs blend in linear light, as the
+// checkerboard's pixels mix on a CRT: with GL_FRAMEBUFFER_SRGB the sRGB frame
+// buffer decodes, blends and re-encodes (the shaders output linear colours: transparency 3)
 void CModel1Render::DrawRuns(GLenum mode, const std::vector<Run> &runs, size_t begin, size_t end)
 {
   if (m_blendStencil)
@@ -1281,15 +1298,28 @@ void CModel1Render::DrawRuns(GLenum mode, const std::vector<Run> &runs, size_t b
       {
         glStencilFunc(GL_EQUAL, 0, 0xff);
         glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+        glEnable(GL_FRAMEBUFFER_SRGB);
       }
       else
       {
         glStencilFunc(GL_ALWAYS, 0, 0xff);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        glDisable(GL_FRAMEBUFFER_SRGB);
       }
     }
     glDrawArrays(mode, runs[i].first, runs[i].count);
   }
+  if (m_blendStencil)
+    glDisable(GL_FRAMEBUFFER_SRGB);
+}
+
+// The frame buffer's format depends on the mode (CreateFrameTarget()), which is set after Init()
+void CModel1Render::SetTransparency(Transparency mode)
+{
+  const bool recreate = m_frameFBO && (mode == Transparency::Blend) != (m_transparency == Transparency::Blend);
+  m_transparency = mode;
+  if (recreate)
+    CreateFrameTarget();
 }
 
 // Our frame buffer (see DrawFrame()), the size of the target
@@ -1300,7 +1330,11 @@ void CModel1Render::CreateFrameTarget()
   glGenTextures(1, &m_frameColor);
   glGenRenderbuffers(1, &m_frameDepthStencil);
   glBindTexture(GL_TEXTURE_2D, m_frameColor);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_totalXPixels, m_totalYPixels, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  // sRGB only for Transparency::Blend (DrawRuns()). With GL_FRAMEBUFFER_SRGB
+  // disabled its values are copied and blitted unchanged, but some older drivers
+  // decode sRGB in blits regardless, so the other modes keep GL_RGBA8
+  const GLint format = m_transparency == Transparency::Blend ? GL_SRGB8_ALPHA8 : GL_RGBA8;
+  glTexImage2D(GL_TEXTURE_2D, 0, format, m_totalXPixels, m_totalYPixels, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glBindTexture(GL_TEXTURE_2D, 0);
