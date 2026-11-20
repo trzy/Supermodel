@@ -40,8 +40,7 @@ public:
 
 	void	BindTexture(Layer layer);
 	void	SetFBO(Layer layer);
-	void	StoreDepth();
-	void	RestoreDepth();
+	void	StoreDepth();			// copies the opaque depth/stencil, which trans layer 2 is drawn against
 
 private:
 
@@ -58,6 +57,7 @@ private:
 	GLuint m_texIDs[3];
 	GLuint m_frameBufferIDCopy;
 	GLuint m_renderBufferIDCopy;
+	GLuint m_frameBufferIDTrans2;	// trans layer 2 + the copy's depth/stencil
 	Layer m_lastLayer;
 	int m_width;
 	int m_height;

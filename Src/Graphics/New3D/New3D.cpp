@@ -419,6 +419,25 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 	return hasOverlay;
 }
 
+// Does RenderScene() draw anything in trans layer 1 or 2 for this priority and pass?
+bool CNew3D::HasTransparentMeshes(int priority, bool renderOverlay) const
+{
+	for (const auto& n : m_nodes) {
+		if (n.viewport.priority != priority) {
+			continue;
+		}
+		for (const auto& m : n.models) {
+			for (auto& mesh : *m.meshes) {		// (Mesh::Render() isn't const)
+				if (mesh.highPriority == renderOverlay && (mesh.Render(Layer::trans1, m.alpha) || mesh.Render(Layer::trans2, m.alpha))) {
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 bool CNew3D::SkipLayer(int layer)
 {
 	for (const auto &n : m_nodes) {
@@ -546,19 +565,23 @@ void CNew3D::RenderFrame(void)
 			m_r3dShader.SetLayer(Layer::colour);
 			bool hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
 
-			glDepthFunc(GL_GREATER);
-
 			m_r3dShader.DiscardAlpha(false);
 
-			m_r3dFrameBuffers.StoreDepth();
-			m_r3dShader.SetLayer(Layer::trans1);
-			m_r3dFrameBuffers.SetFBO(Layer::trans1);
-			RenderScene(pri, renderOverlay, Layer::trans1);
+			// Draw transparent layers, only when there is something actually in them (saves the depth copy and two passes
+			// over the scene). Trans layer 2 is drawn against the copy of the opaque depth (see SetFBO()), as trans layer 1 writes depth
+			if (HasTransparentMeshes(pri, renderOverlay)) {
 
-			m_r3dFrameBuffers.RestoreDepth();
-			m_r3dShader.SetLayer(Layer::trans2);
-			m_r3dFrameBuffers.SetFBO(Layer::trans2);
-			RenderScene(pri, renderOverlay, Layer::trans2);
+				glDepthFunc(GL_GREATER);
+
+				m_r3dFrameBuffers.StoreDepth();
+				m_r3dShader.SetLayer(Layer::trans1);
+				m_r3dFrameBuffers.SetFBO(Layer::trans1);
+				RenderScene(pri, renderOverlay, Layer::trans1);
+
+				m_r3dShader.SetLayer(Layer::trans2);
+				m_r3dFrameBuffers.SetFBO(Layer::trans2);
+				RenderScene(pri, renderOverlay, Layer::trans2);
+			}
 
 			if (!renderOverlay) {
 				ProcessLos(pri);
