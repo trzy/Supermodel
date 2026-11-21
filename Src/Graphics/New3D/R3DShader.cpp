@@ -136,7 +136,6 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locBaseTexType		= glGetUniformLocation(m_shaderProgram, "baseTexType");
 	m_locTextureInverted	= glGetUniformLocation(m_shaderProgram, "textureInverted");
 	m_locTexWrapMode		= glGetUniformLocation(m_shaderProgram, "textureWrapMode");
-	m_locColourLayer		= glGetUniformLocation(m_shaderProgram, "colourLayer");
 	m_locLayerDepthBias		= glGetUniformLocation(m_shaderProgram, "layerDepthBias");
 
 	m_locFogIntensity		= glGetUniformLocation(m_shaderProgram, "fogIntensity");
@@ -168,7 +167,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locModelMat			= glGetUniformLocation(m_shaderProgram, "modelMat");
 
 	m_locStep15Luminous		= glGetUniformLocation(m_shaderProgram, "step15Luminous");
-	m_locDiscardAlpha		= glGetUniformLocation(m_shaderProgram, "discardAlpha");
+	m_locTransLayer			= glGetUniformLocation(m_shaderProgram, "transLayer");
 
 	m_locCota				= glGetUniformLocation(m_shaderProgram, "cota");
 
@@ -216,7 +215,6 @@ void R3DShader::SetShader(bool enable)
 	if (enable) {
 		glUseProgram(m_shaderProgram);
 		Start();
-		DiscardAlpha(false);	// need some default
 	}
 	else {
 		glUseProgram(0);
@@ -335,6 +333,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		glUniform2iv(m_locTexWrapMode, 1, m_texWrapMode);
 	}
 
+	if (m_dirtyMesh || m->transLSelect != m_transLayer) {
+		m_transLayer = m->transLSelect;
+		glUniform1i(m_locTransLayer, m_transLayer);
+	}
+
 	if (m_dirtyMesh || m->noLosReturn != m_noLosReturn) {
 		m_noLosReturn = m->noLosReturn;
 		glStencilFunc(GL_ALWAYS, m_noLosReturn << 7, 0b10000000);
@@ -417,16 +420,6 @@ void R3DShader::SetModelStates(const Model* model)
 	glUniformMatrix4fv(m_locModelMat, 1, GL_FALSE, model->modelMat);
 
 	m_dirtyModel = false;
-}
-
-void R3DShader::DiscardAlpha(bool discard)
-{
-	glUniform1i(m_locDiscardAlpha, discard);
-}
-
-void R3DShader::SetLayer(Layer layer)
-{
-	glUniform1i(m_locColourLayer, (GLint)layer);
 }
 
 void R3DShader::PrintShaderResult(GLuint shader)

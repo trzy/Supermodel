@@ -42,8 +42,6 @@ public:
 	void	Start				();
 	void	SetShader			(bool enable = true);
 	GLint	GetVertexAttribPos	(const std::string& attrib);
-	void	DiscardAlpha		(bool discard);				// use to remove alpha from texture alpha only polys for 1st pass
-	void	SetLayer			(Layer layer);
 
 private:
 
@@ -73,7 +71,6 @@ private:
 	GLint m_locTextureInverted;
 	GLint m_locTexWrapMode;
 	GLint m_locTranslatorMap;
-	GLint m_locColourLayer;
 	GLint m_locLayerDepthBias;
 
 	// cached mesh values
@@ -94,6 +91,7 @@ private:
 
 	bool	m_layered;
 	bool	m_noLosReturn;
+	bool	m_transLayer = false;
 	float	m_microTexMinLOD;
 	int		m_microTexID;
 	int		m_baseTexInfo[4];
@@ -145,7 +143,7 @@ private:
 
 	// global uniforms
 	GLint m_locStep15Luminous;
-	GLint m_locDiscardAlpha;
+	GLint m_locTransLayer = -1;
 
 	// vertex attribute position cache
 	std::map<std::string, GLint> m_vertexLocCache;

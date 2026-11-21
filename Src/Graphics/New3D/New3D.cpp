@@ -361,7 +361,7 @@ void CNew3D::DrawAmbientFog()
 	}
 }
 
-bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
+bool CNew3D::RenderScene(int priority, bool renderOverlay)
 {
 	glActiveTexture(GL_TEXTURE0);
 	m_textureBank[0].Bind();
@@ -401,7 +401,6 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 					}
 
 					if (mesh.layered != (layeredPass == 1)) continue;
-					if (!mesh.Render(layer, m.alpha))		continue;
 					if (mesh.highPriority != renderOverlay) continue;
 
 					if (!matrixLoaded) {
@@ -417,25 +416,6 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 	}
 
 	return hasOverlay;
-}
-
-// Does RenderScene() draw anything in trans layer 1 or 2 for this priority and pass?
-bool CNew3D::HasTransparentMeshes(int priority, bool renderOverlay) const
-{
-	for (const auto& n : m_nodes) {
-		if (n.viewport.priority != priority) {
-			continue;
-		}
-		for (const auto& m : n.models) {
-			for (auto& mesh : *m.meshes) {		// (Mesh::Render() isn't const)
-				if (mesh.highPriority == renderOverlay && (mesh.Render(Layer::trans1, m.alpha) || mesh.Render(Layer::trans2, m.alpha))) {
-					return true;
-				}
-			}
-		}
-	}
-
-	return false;
 }
 
 bool CNew3D::SkipLayer(int layer)
@@ -540,11 +520,17 @@ void CNew3D::RenderFrame(void)
 		}
 	}
 
-	m_r3dFrameBuffers.SetFBO(Layer::colour);		// colour will draw to all 3 buffers. For regular opaque pixels the transparent layers will be essentially masked
+	// Our frame: cleared (with the translucent marker), then the fog layers if any, which only write the colour
+	m_r3dFrameBuffers.Bind(true);
 	glClear(GL_COLOR_BUFFER_BIT);
+	m_r3dFrameBuffers.Bind(false);
 
 	DrawAmbientFog();
 	DrawScrollFog();								// fog layer if applicable must be drawn here
+
+	// As the Real3D: every polygon in one pass, in the game's order. Translucent pixels are drawn on their layer's
+	// half of a checkerboard (see WriteOutputs() in R3DShaderCommon.h) and blended with their neighbours by Draw()
+	m_r3dFrameBuffers.Bind(true);
 
 	for (int pri = 0; pri <= 3; pri++) {
 
@@ -556,44 +542,22 @@ void CNew3D::RenderFrame(void)
 
 			SetRenderStates();
 
-			m_r3dFrameBuffers.SetFBO(Layer::colour);
-
 			glClearDepth(0.0);
 			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-			m_r3dShader.DiscardAlpha(true);
-			m_r3dShader.SetLayer(Layer::colour);
-			bool hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
-
-			m_r3dShader.DiscardAlpha(false);
-
-			// Draw transparent layers, only when there is something actually in them (saves the depth copy and two passes
-			// over the scene). Trans layer 2 is drawn against the copy of the opaque depth (see SetFBO()), as trans layer 1 writes depth
-			if (HasTransparentMeshes(pri, renderOverlay)) {
-
-				glDepthFunc(GL_GREATER);
-
-				m_r3dFrameBuffers.StoreDepth();
-				m_r3dShader.SetLayer(Layer::trans1);
-				m_r3dFrameBuffers.SetFBO(Layer::trans1);
-				RenderScene(pri, renderOverlay, Layer::trans1);
-
-				m_r3dShader.SetLayer(Layer::trans2);
-				m_r3dFrameBuffers.SetFBO(Layer::trans2);
-				RenderScene(pri, renderOverlay, Layer::trans2);
-			}
+			bool hasOverlay = RenderScene(pri, renderOverlay);
 
 			if (!renderOverlay) {
 				ProcessLos(pri);
 			}
-						
+
 			DisableRenderStates();
 
-			if (!hasOverlay) break;								// no high priority polys						
+			if (!hasOverlay) break;								// no high priority polys
 		}
 	}
 
-	m_r3dFrameBuffers.SetFBO(Layer::none);
+	m_r3dFrameBuffers.Unbind();
 
 	if (m_aaTarget) {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);			// if we have an AA target draw to it instead of the default back buffer

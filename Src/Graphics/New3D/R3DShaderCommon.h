@@ -26,10 +26,6 @@
 
 static const char* fragmentShaderR3DCommon = R"glsl(
 
-#define LayerColour 0x0
-#define LayerTrans0 0x1
-#define LayerTrans1 0x2
-
 vec4 ExtractColour(int type, uint value)
 {
 	vec4 c = vec4(0.0);
@@ -262,19 +258,6 @@ vec4 GetTextureValue()
 		}
 	}
 
-	if(textureAlpha) {
-		if(discardAlpha) {					// opaque 1st pass
-			if (tex1Data.a < 1.0) {
-				discard;
-			}
-		}
-		else {								// transparent 2nd pass
-			if ((tex1Data.a * fsColor.a) >= 1.0) {
-				discard;
-			}
-		}
-	}
-
 	if (textureAlpha == false && alphaTest == false) {
 		tex1Data.a = 1.0;
 	}
@@ -361,26 +344,25 @@ void ComputeSpotlight(vec4 spotEllipse, vec2 spotRange, float viewZ,
     lobeFogEffect = enable * ellipse;
 }
 
-void WriteOutputs(vec4 colour, int layer)
+// As the Real3D: everything is drawn in one pass, a translucent pixel only on its
+// transparency layer's half of a checkerboard (layer 0 where x+y is even, layer 1
+// where it is odd), keeping its alpha. R3DFrameBuffers::Draw() blends it with its
+// neighbour, which has what is behind it. Out1 marks the translucent pixels: the
+// alpha alone can't tell them from the fog layer behind everything.
+void WriteOutputs(vec4 colour)
 {
-	vec4 blank = vec4(0.0);
-
-	if(layer==LayerColour) {
-		colour.a = 1.0;		// always have alpha of 1
-		out0 = colour;
-		out1 = blank;
-		out2 = blank;
+	bool translucent = (textureAlpha || fsColor.a < 0.999) && colour.a < 0.999;	// (contour texture edges stay opaque)
+	if(translucent) {
+		int slot = (int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1;
+		if(slot != (transLayer ? 1 : 0)) {
+			discard;
+		}
 	}
-	else if(layer==LayerTrans0) {
-		out0 = blank;
-		out1 = colour;
-		out2 = blank;
+	else {
+		colour.a = 1.0;
 	}
-	else if(layer==LayerTrans1) {
-		out0 = blank;
-		out1 = blank;
-		out2 = colour;
-	}
+	out0 = colour;
+	out1 = vec4(translucent ? 1.0 : 0.0);
 }
 
 )glsl";

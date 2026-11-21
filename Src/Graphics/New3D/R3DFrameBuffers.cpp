@@ -19,6 +19,8 @@
  **/
 
 #include "R3DFrameBuffers.h"
+#include <initializer_list>
+#include <iterator>
 
 namespace New3D {
 
@@ -26,21 +28,13 @@ R3DFrameBuffers::R3DFrameBuffers()
 {
 	m_frameBufferID = 0;
 	m_renderBufferID = 0;
-	m_frameBufferIDCopy = 0;
-	m_renderBufferIDCopy = 0;
-	m_frameBufferIDTrans2 = 0;
+	m_colourTexID = 0;
+	m_markTexID = 0;
 	m_width = 0;
 	m_height = 0;
 	m_vao = 0;
 
-	for (auto &i : m_texIDs) {
-		i = 0;
-	}
-
-	m_lastLayer = Layer::none;
-
-	AllocShaderTrans();
-	AllocShaderBase();
+	AllocShader();
 
 	glGenVertexArrays(1, &m_vao);
 	glBindVertexArray(m_vao);
@@ -51,8 +45,7 @@ R3DFrameBuffers::R3DFrameBuffers()
 R3DFrameBuffers::~R3DFrameBuffers()
 {
 	DestroyFBO();
-	m_shaderTrans.UnloadShaders();
-	m_shaderBase.UnloadShaders();
+	m_shader.UnloadShaders();
 
 	if (m_vao) {
 		glDeleteVertexArrays(1, &m_vao);
@@ -65,17 +58,15 @@ Result R3DFrameBuffers::CreateFBO(int width, int height)
 	m_width = width;
 	m_height = height;
 
-	m_texIDs[0] = CreateTexture(width, height);		// colour buffer
-	m_texIDs[1] = CreateTexture(width, height);		// trans layer1
-	m_texIDs[2] = CreateTexture(width, height);		// trans layer2
+	m_colourTexID	= CreateTexture(width, height, GL_RGBA8);
+	m_markTexID		= CreateTexture(width, height, GL_R8);
 
 	glGenFramebuffers(1, &m_frameBufferID);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
 
-	// colour attachments
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texIDs[0], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_texIDs[1], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, m_texIDs[2], 0);
+	// colour attachments: the shaders' outputs 0 and 1
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colourTexID, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_markTexID, 0);
 
 	// depth/stencil attachment
 	glGenRenderbuffers(1, &m_renderBufferID);
@@ -83,51 +74,12 @@ Result R3DFrameBuffers::CreateFBO(int width, int height)
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferID);
 
-	// check setup was successful
+	// check setup was successful (while bound)
 	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);	//created R3DFrameBuffers now disable it
-
-	return ((CreateFBODepthCopy(width, height) == Result::OKAY) && (fboStatus == GL_FRAMEBUFFER_COMPLETE)) ? Result::OKAY : Result::FAIL;
-}
-
-Result R3DFrameBuffers::CreateFBODepthCopy(int width, int height)
-{
-	glGenFramebuffers(1, &m_frameBufferIDCopy);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferIDCopy);
-
-	glGenRenderbuffers(1, &m_renderBufferIDCopy);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_renderBufferIDCopy);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferIDCopy);
-
-	glDrawBuffer(GL_NONE);		// depth only
-	glReadBuffer(GL_NONE);
-
-	auto copyStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);		// (while bound)
-
-	// Trans layer 2's frame buffer: its texture at attachment 2 (the shader's output location 2) and the copy's
-	// depth/stencil, which StoreDepth() fills with the opaque depth, so no blit restores it
-	glGenFramebuffers(1, &m_frameBufferIDTrans2);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferIDTrans2);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, m_texIDs[2], 0);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferIDCopy);
-	GLenum trans2Buffers[] = { GL_NONE, GL_NONE, GL_COLOR_ATTACHMENT2 };
-	glDrawBuffers((GLsizei)std::size(trans2Buffers), trans2Buffers);
-	glReadBuffer(GL_NONE);
-
-	auto trans2Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	return (copyStatus == GL_FRAMEBUFFER_COMPLETE && trans2Status == GL_FRAMEBUFFER_COMPLETE) ? Result::OKAY : Result::FAIL;
-}
-
-void R3DFrameBuffers::StoreDepth()
-{
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_frameBufferID);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_frameBufferIDCopy);
-	glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+	return (fboStatus == GL_FRAMEBUFFER_COMPLETE) ? Result::OKAY : Result::FAIL;
 }
 
 void R3DFrameBuffers::DestroyFBO()
@@ -138,32 +90,20 @@ void R3DFrameBuffers::DestroyFBO()
 		glDeleteFramebuffers(1, &m_frameBufferID);
 	}
 
-	if (m_frameBufferIDCopy) {
-		glDeleteRenderbuffers(1, &m_renderBufferIDCopy);
-		glDeleteFramebuffers(1, &m_frameBufferIDCopy);
-	}
-
-	if (m_frameBufferIDTrans2) {
-		glDeleteFramebuffers(1, &m_frameBufferIDTrans2);
-	}
-
-	for (auto &i : m_texIDs) {
-		if (i) {
-			glDeleteTextures(1, &i);
-			i = 0;
+	for (GLuint *tex : { &m_colourTexID, &m_markTexID }) {
+		if (*tex) {
+			glDeleteTextures(1, tex);
+			*tex = 0;
 		}
 	}
 
 	m_frameBufferID = 0;
 	m_renderBufferID = 0;
-	m_frameBufferIDCopy = 0;
-	m_renderBufferIDCopy = 0;
-	m_frameBufferIDTrans2 = 0;
 	m_width = 0;
 	m_height = 0;
 }
 
-GLuint R3DFrameBuffers::CreateTexture(int width, int height)
+GLuint R3DFrameBuffers::CreateTexture(int width, int height, GLint format)
 {
 	GLuint texId;
 	glGenTextures(1, &texId);
@@ -172,60 +112,37 @@ GLuint R3DFrameBuffers::CreateTexture(int width, int height)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format == GL_R8 ? GL_RED : GL_RGBA, GL_UNSIGNED_BYTE, 0);
 	return texId;
 }
 
-void R3DFrameBuffers::BindTexture(Layer layer)
+void R3DFrameBuffers::Bind(bool marker)
 {
-	glBindTexture(GL_TEXTURE_2D, m_texIDs[(int)layer]);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
+	GLenum buffers[] = { GL_COLOR_ATTACHMENT0, marker ? GL_COLOR_ATTACHMENT1 : GL_NONE };
+	glDrawBuffers((GLsizei)std::size(buffers), buffers);
 }
 
-void R3DFrameBuffers::SetFBO(Layer layer)
+void R3DFrameBuffers::Unbind()
 {
-	if (m_lastLayer == layer) {
-		return;
-	}
-
-	switch (layer)
-	{
-	case Layer::colour:
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-		GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-		glDrawBuffers((GLsizei)std::size(buffers), buffers);
-		break;
-	}
-	case Layer::trans1:
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-		GLenum buffers[] = { GL_NONE, GL_COLOR_ATTACHMENT1, GL_NONE };
-		glDrawBuffers((GLsizei)std::size(buffers), buffers);
-		break;
-	}
-	case Layer::trans2:
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferIDTrans2);	// with the copy's depth (CreateFBODepthCopy())
-		GLenum buffers[] = { GL_NONE, GL_NONE, GL_COLOR_ATTACHMENT2 };
-		glDrawBuffers((GLsizei)std::size(buffers), buffers);
-		break;
-	}
-	case Layer::none:
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
-		break;
-	}
-	default:
-	{
-		break;
-	}
-	}
-
-	m_lastLayer = layer;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDrawBuffer(GL_BACK);
 }
 
-void R3DFrameBuffers::AllocShaderBase()
+// The Real3D draws the translucent pixels on half of a checkerboard (layer 0
+// where x+y is even, layer 1 where it is odd; see WriteOutputs() in
+// R3DShaderCommon.h), and its anti-aliasing filter blends each with what is
+// next to it, which is what is behind it. In a checkerboard a pixel's four
+// neighbours (left, right, up, down) are all on the other half, so here:
+//   - a translucent pixel (marked) is drawn over the average of its neighbours,
+//     which are what is behind it
+//   - but next to another translucent pixel (where layers 0 and 1 overlap) the
+//     two are mixed, opaque, as the hardware does
+//   - a pixel that isn't translucent with two or more translucent neighbours is
+//     behind them (inside their polygon, even at its edge): their average is
+//     drawn over it. With only one it is beside the polygon, and left alone.
+// Otherwise the pixel is drawn as it is.
+void R3DFrameBuffers::AllocShader()
 {
 	static const char *vertexShader = R"glsl(
 
@@ -247,121 +164,99 @@ void R3DFrameBuffers::AllocShaderBase()
 
 	#version 410 core
 
-	// inputs
-	uniform sampler2D tex1;			// base tex
+	uniform sampler2D colourTex;	// the frame
+	uniform sampler2D markTex;		// r = 1: a translucent pixel
 
-	// outputs
 	out vec4 fragColor;
 
-	void main()
+	// f over b (not premultiplied)
+	vec4 Over(vec4 f, vec4 b)
 	{
-		ivec2 tc = ivec2(gl_FragCoord.xy /*-vec2(0.5)*/);
-		fragColor = texelFetch(tex1, tc, 0);
-	}
-
-	)glsl";
-
-	m_shaderBase.LoadShaders(vertexShader, fragmentShader);
-	m_shaderBase.uniformLoc[0] = m_shaderBase.GetUniformLocation("tex1");
-}
-
-void R3DFrameBuffers::AllocShaderTrans()
-{
-	static const char *vertexShader = R"glsl(
-
-	#version 410 core
-
-	void main(void)
-	{
-		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
-										vec4(-1.0,  1.0, 0.0, 1.0),
-										vec4( 1.0, -1.0, 0.0, 1.0),
-										vec4( 1.0,  1.0, 0.0, 1.0));
-
-		gl_Position = vertices[gl_VertexID % 4];
-	}
-
-	)glsl";
-
-	static const char *fragmentShader = R"glsl(
-
-	#version 410 core
-
-	uniform sampler2D tex1;			// trans layer 1
-	uniform sampler2D tex2;			// trans layer 2
-
-	// outputs
-	out vec4 fragColor;
-
-	void main()
-	{
-		ivec2 tc = ivec2(gl_FragCoord.xy /*-vec2(0.5)*/);
-		vec4 colTrans1 = texelFetch(tex1, tc, 0);
-		vec4 colTrans2 = texelFetch(tex2, tc, 0);
-
-		// if both transparency layers overlap, the result is opaque
-		if (colTrans1.a * colTrans2.a > 0.0) {
-			vec3 mixCol = mix(colTrans1.rgb, colTrans2.rgb, (colTrans2.a + (1.0 - colTrans1.a)) / 2.0);
-			fragColor = vec4(mixCol, 1.0);
+		float a = f.a + b.a * (1.0 - f.a);
+		if (a <= 0.0) {
+			return vec4(0.0);
 		}
-		else if (colTrans1.a > 0.0) {
-			fragColor = colTrans1;
+		return vec4((f.rgb * f.a + b.rgb * b.a * (1.0 - f.a)) / a, a);
+	}
+
+	void main()
+	{
+		ivec2 p = ivec2(gl_FragCoord.xy);
+		ivec2 size = textureSize(colourTex, 0);
+		vec4 cp = texelFetch(colourTex, p, 0);
+		bool tp = texelFetch(markTex, p, 0).r > 0.5;
+
+		// the neighbours on the screen: the translucent ones and the others
+		const ivec2 offsets[4] = ivec2[](ivec2(-1, 0), ivec2(1, 0), ivec2(0, -1), ivec2(0, 1));
+		vec4 translucent = vec4(0.0), other = vec4(0.0);
+		int numTranslucent = 0, numOther = 0;
+		for (int i = 0; i < 4; i++) {
+			ivec2 n = p + offsets[i];
+			if (any(lessThan(n, ivec2(0))) || any(greaterThanEqual(n, size))) {
+				continue;
+			}
+			vec4 c = texelFetch(colourTex, n, 0);
+			if (texelFetch(markTex, n, 0).r > 0.5) {
+				translucent += c;
+				numTranslucent++;
+			}
+			else {
+				other += c;
+				numOther++;
+			}
+		}
+
+		if (tp) {
+			if (numTranslucent == 0) {
+				fragColor = Over(cp, other / float(max(numOther, 1)));	// over what is behind it
+			}
+			else {
+				// next to a translucent pixel (layers 0 and 1 overlap): opaque, mixed
+				vec4 n = translucent / float(numTranslucent);
+				bool pIsLayer0 = ((p.x + p.y) & 1) == 0;
+				vec4 l0 = pIsLayer0 ? cp : n;
+				vec4 l1 = pIsLayer0 ? n : cp;
+				fragColor = vec4(mix(l0.rgb, l1.rgb, (l1.a + (1.0 - l0.a)) / 2.0), 1.0);
+			}
+		}
+		else if (numTranslucent >= 2) {
+			fragColor = Over(translucent / float(numTranslucent), cp);	// behind translucent pixels
 		}
 		else {
-			fragColor = colTrans2;		// if alpha is zero it will have no effect anyway
+			fragColor = cp;										// nothing translucent here
 		}
 	}
 
 	)glsl";
 
-	m_shaderTrans.LoadShaders(vertexShader, fragmentShader);
-
-	m_shaderTrans.uniformLoc[0] = m_shaderTrans.GetUniformLocation("tex1");
-	m_shaderTrans.uniformLoc[1] = m_shaderTrans.GetUniformLocation("tex2");
+	m_shader.LoadShaders(vertexShader, fragmentShader);
+	m_shader.uniformLoc[0] = m_shader.GetUniformLocation("colourTex");
+	m_shader.uniformLoc[1] = m_shader.GetUniformLocation("markTex");
 }
 
 void R3DFrameBuffers::Draw()
 {
 	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
-	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
+	glDisable	(GL_DEPTH_TEST);
 	glDisable	(GL_CULL_FACE);
-	glBlendFunc	(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc	(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	// over the 2D layers behind
 	glEnable	(GL_BLEND);
 
-	for (int i = 0; i < (int)std::size(m_texIDs); i++) {	// bind our textures to correct texture units
-		glActiveTexture(GL_TEXTURE0 + i);
-		glBindTexture(GL_TEXTURE_2D, m_texIDs[i]);
-	}
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_colourTexID);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, m_markTexID);
+	glActiveTexture(GL_TEXTURE0);
+	glBindVertexArray(m_vao);
 
-	glActiveTexture		(GL_TEXTURE0);
-	glBindVertexArray	(m_vao);
-
-	DrawBaseLayer		();
-	DrawAlphaLayer		();
+	m_shader.EnableShader();
+	glUniform1i(m_shader.uniformLoc[0], 0);
+	glUniform1i(m_shader.uniformLoc[1], 1);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	m_shader.DisableShader();
 
 	glDisable			(GL_BLEND);
 	glBindVertexArray	(0);
-}
-
-void R3DFrameBuffers::DrawBaseLayer()
-{
-	m_shaderBase.EnableShader();
-	glUniform1i(m_shaderBase.uniformLoc[0], 0);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-	m_shaderBase.DisableShader();
-}
-
-void R3DFrameBuffers::DrawAlphaLayer()
-{
-	m_shaderTrans.EnableShader();
-	glUniform1i(m_shaderTrans.uniformLoc[0], 1);		// tex unit 1
-	glUniform1i(m_shaderTrans.uniformLoc[1], 2);		// tex unit 2
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-	m_shaderTrans.DisableShader();
 }
 
 }

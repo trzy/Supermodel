@@ -267,7 +267,7 @@ uniform int		baseTexType;
 uniform bool	textureInverted;
 uniform bool	textureAlpha;
 uniform bool	alphaTest;
-uniform bool	discardAlpha;
+uniform bool	transLayer;			// the mesh's transparency layer (transLSelect)
 uniform ivec2	textureWrapMode;
 uniform int		texturePage;
 
@@ -293,7 +293,6 @@ uniform bool	fixedShading;
 uniform bool	smoothShading;
 uniform float	layerDepthBias;		// PRO-1000: >1.0 pulls layered polys towards the viewer (reverse z)
 uniform bool	step15Luminous;
-uniform int		colourLayer;
 
 // matrices (shared with vertex shader)
 uniform mat4	projMat;
@@ -331,16 +330,15 @@ float	fsFixedShade;
 float	fsLODBase;
 
 //outputs
-layout(location = 0) out vec4 out0;		// opaque
-layout(location = 1) out vec4 out1;		// trans layer 1
-layout(location = 2) out vec4 out2;		// trans layer 2
+layout(location = 0) out vec4 out0;		// the colour
+layout(location = 1) out vec4 out1;		// r = 1: a translucent pixel (see WriteOutputs())
 
 // forward declarations (see common file)
 
 float CalcFog();
 void Step15Luminous(inout vec4 colour);
 vec4 GetTextureValue();
-void WriteOutputs(vec4 colour, int layer);
+void WriteOutputs(vec4 colour);
 float Sqr(float a);
 float SqrLength(vec2 a);
 void ComputeSpotlight(vec4 spotEllipse, vec2 spotRange, float viewZ, out float lobeEffect, out float lobeFogEffect);
@@ -553,7 +551,7 @@ void main()
 	finalData.rgb = mix(finalData.rgb, fogData.rgb + lSpotFogColor, fogData.a);
 
 	// Write outputs to colour buffers
-	WriteOutputs(finalData,colourLayer);
+	WriteOutputs(finalData);
 }
 )glsl";
 
