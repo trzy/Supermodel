@@ -37,10 +37,10 @@
 #include <chrono>
 #include <cstring>
 
-CModel1Comm::CModel1Comm()
+CModel1Comm::CModel1Comm() :
+    m_shared{},
+    m_buffer0{}
 {
-  memset(m_shared, 0, sizeof(m_shared));
-  memset(m_buffer0, 0, sizeof(m_buffer0));
 }
 
 CModel1Comm::~CModel1Comm()
