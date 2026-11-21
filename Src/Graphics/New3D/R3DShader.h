@@ -64,6 +64,7 @@ private:
 	GLint m_locTexturePage;
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
+	GLint m_locTransEdge = -1;
 	GLint m_locMicroTexMinLOD;
 	GLint m_locMicroTexID;
 	GLint m_locBaseTexInfo;
@@ -78,6 +79,7 @@ private:
 	bool	m_textured2;
 	bool	m_textureAlpha;		// use alpha in texture
 	bool	m_alphaTest;		// discard fragment based on alpha (ogl does this with fixed function)
+	bool	m_transEdge = false;	// edge on translucency
 	float	m_fogIntensity;
 	bool	m_lightEnabled;
 	float	m_shininess;

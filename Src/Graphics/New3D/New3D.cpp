@@ -1387,6 +1387,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	//copy attributes
 	currentMesh->textured		= ph.TexEnabled();
 	currentMesh->alphaTest		= ph.AlphaTest();
+	currentMesh->transEdge		= ph.EdgeOnTranslucency();
 	currentMesh->textureAlpha	= ph.TextureAlpha();
 	currentMesh->polyAlpha		= ph.PolyAlpha();
 	currentMesh->lighting		= ph.LightEnabled();
@@ -1424,7 +1425,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 			if (ph.AlphaTest()) {
 				smoothU = false;	// smooth wrap makes no sense for alpha tested polys with pixel dilate
-				smoothV = false;
+				smoothV = false;	// this is a hack, it's not arcade accurate, see scud attract. Safe to remove if you want
 			}
 
 			if (ph.TexUMirror()) {

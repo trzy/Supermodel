@@ -135,6 +135,7 @@ struct Mesh
 	bool polyAlpha		= false;		// specified in the rgba colour
 	bool textureAlpha	= false;		// use alpha in texture
 	bool alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
+	bool transEdge		= false;		// edge on translucency: a contour texture's edge is translucent, not cut
 	bool layered		= false;		// stencil poly
 	bool highPriority	= false;		// rendered over the top
 	bool transLSelect	= false;		// actually the transparency layer, false = layer 0, true = layer 1

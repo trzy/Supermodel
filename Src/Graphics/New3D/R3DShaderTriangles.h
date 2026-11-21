@@ -103,6 +103,7 @@ uniform bool	textureInverted;
 uniform bool	textureAlpha;
 uniform bool	alphaTest;
 uniform bool	transLayer;			// the mesh's transparency layer (transLSelect)
+uniform bool	transEdge;			// edge on translucency: a contour texture's edge is translucent (WriteOutputs())
 uniform ivec2	textureWrapMode;
 uniform int		texturePage;
 

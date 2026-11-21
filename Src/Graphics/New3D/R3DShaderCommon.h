@@ -252,10 +252,13 @@ vec4 GetTextureValue()
 		tex1Data.rgb = vec3(1.0) - tex1Data.rgb;
 	}
 
-	if (alphaTest) {
+	// contour: a 1 bit test, what passes is opaque. With edge on translucency the
+	// filtered edge keeps its alpha instead
+	if (alphaTest && !transEdge) {
 		if (tex1Data.a < (32.0/255.0)) {
 			discard;
 		}
+		tex1Data.a = 1.0;
 	}
 
 	if (textureAlpha == false && alphaTest == false) {
@@ -351,7 +354,7 @@ void ComputeSpotlight(vec4 spotEllipse, vec2 spotRange, float viewZ,
 // alpha alone can't tell them from the fog layer behind everything.
 void WriteOutputs(vec4 colour)
 {
-	bool translucent = (textureAlpha || fsColor.a < 0.999) && colour.a < 0.999;	// (contour texture edges stay opaque)
+	bool translucent = colour.a < 0.999;
 	if(translucent) {
 		int slot = (int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1;
 		if(slot != (transLayer ? 1 : 0)) {

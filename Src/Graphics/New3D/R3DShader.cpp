@@ -130,6 +130,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locTexture2Enabled	= glGetUniformLocation(m_shaderProgram, "microTexture");
 	m_locTextureAlpha		= glGetUniformLocation(m_shaderProgram, "textureAlpha");
 	m_locAlphaTest			= glGetUniformLocation(m_shaderProgram, "alphaTest");
+	m_locTransEdge			= glGetUniformLocation(m_shaderProgram, "transEdge");
 	m_locMicroTexMinLOD		= glGetUniformLocation(m_shaderProgram, "microTextureMinLOD");
 	m_locMicroTexID			= glGetUniformLocation(m_shaderProgram, "microTextureID");
 	m_locBaseTexInfo		= glGetUniformLocation(m_shaderProgram, "baseTexInfo");
@@ -280,6 +281,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->alphaTest != m_alphaTest) {
 		glUniform1i(m_locAlphaTest, m->alphaTest);
 		m_alphaTest = m->alphaTest;
+	}
+
+	if (m_dirtyMesh || m->transEdge != m_transEdge) {
+		glUniform1i(m_locTransEdge, m->transEdge);
+		m_transEdge = m->transEdge;
 	}
 
 	if (m_dirtyMesh || m->textureAlpha != m_textureAlpha) {
