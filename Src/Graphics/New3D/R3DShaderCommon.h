@@ -362,7 +362,7 @@ void WriteOutputs(vec4 colour)
 		colour.a = 1.0;
 	}
 	out0 = colour;
-	out1 = vec4(translucent ? 1.0 : 0.0);
+	out1 = vec4(translucent ? 1.0 : 0.0, 0.0, 0.0, 0.0);	// gb: the edge (quads, EdgeInfo())
 }
 
 )glsl";

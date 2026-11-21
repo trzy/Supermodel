@@ -180,10 +180,14 @@ void main(void)
 	gs_out.LODBase = gs_in[0].LODBase;
 
 	if (triangle) {
+		vec2 tv[4];
 		for (int i=0; i<4; i++) {
-			SetVertexAttribs(i);
+			tv[i] = SetVertexAttribs(i);
 		}
 		for (int i=0; i<3; i++) {
+			for (int j=0; j<4; j++) {
+				gs_out.v[j] = tv[j] - tv[i];		// the corners relative to the fragment: its edges (EdgeInfo())
+			}
 			gs_out.barycentricCoords = vec4(i==0, i==1, i==2, 1.0);
 			SetTriAttribs(i);
 			gl_Position = gl_in[i].gl_Position;
@@ -343,6 +347,35 @@ float Sqr(float a);
 float SqrLength(vec2 a);
 void ComputeSpotlight(vec4 spotEllipse, vec2 spotRange, float viewZ, out float lobeEffect, out float lobeFogEffect);
 
+// The polygon's nearest edge, as the Real3D's anti-aliasing writes it: its
+// offset from the pixel centre along x (a steep edge) or y (a shallow one), in
+// pixels, if under one pixel. Returns (axis, offset): axis 0.5 = x, 1 = y, 0 = no
+// edge near; offset mapped from -1..1 to 0..1. fs_in.v[] are the corners
+// relative to this pixel (normalised device coordinates); ndcPerPixel converts.
+vec2 EdgeInfo(vec2 ndcPerPixel)
+{
+	float best = 1.0;
+	float axis = 0.0;
+	for (int j=0; j<4; j++) {
+		vec2 a = fs_in.v[j] / ndcPerPixel;
+		vec2 b = fs_in.v[(j+1)%4] / ndcPerPixel;
+		vec2 e = b - a;
+		float len = length(e);
+		if (len < 1e-4) {
+			continue;					// a triangle's repeated corner
+		}
+		vec2 n = vec2(-e.y, e.x) / len;
+		float s = dot(n, a);			// signed distance from the pixel centre to the edge's line
+		bool alongX = abs(n.x) >= abs(n.y);
+		float off = alongX ? s / n.x : s / n.y;
+		if (abs(off) < abs(best)) {
+			best = off;
+			axis = alongX ? 0.5 : 1.0;
+		}
+	}
+	return vec2(axis, clamp(best * 0.5 + 0.5, 0.0, 1.0));
+}
+
 void QuadraticInterpolation()
 {
 	// init interpolated vertex attributes
@@ -445,6 +478,9 @@ void main()
 	vec4 colData;
 	vec4 finalData;
 	vec4 fogData;
+
+	// pixels per unit of fs_in.v (derivatives: before anything can discard)
+	vec2 ndcPerPixel = vec2(abs(dFdx(fs_in.v[0].x)), abs(dFdy(fs_in.v[0].y)));
 
 	QuadraticInterpolation();	// calculate our vertex attributes
 
@@ -552,6 +588,11 @@ void main()
 
 	// Write outputs to colour buffers
 	WriteOutputs(finalData);
+
+	// an opaque pixel's edge, for the anti-aliasing (R3DFrameBuffers::Draw())
+	if (out1.r < 0.5) {
+		out1.gb = EdgeInfo(max(ndcPerPixel, vec2(1e-8)));
+	}
 }
 )glsl";
 

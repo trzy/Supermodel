@@ -59,7 +59,7 @@ Result R3DFrameBuffers::CreateFBO(int width, int height)
 	m_height = height;
 
 	m_colourTexID	= CreateTexture(width, height, GL_RGBA8);
-	m_markTexID		= CreateTexture(width, height, GL_R8);
+	m_markTexID		= CreateTexture(width, height, GL_RGBA8);	// r: translucent, gb: the edge (EdgeInfo())
 
 	glGenFramebuffers(1, &m_frameBufferID);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
@@ -165,7 +165,7 @@ void R3DFrameBuffers::AllocShader()
 	#version 410 core
 
 	uniform sampler2D colourTex;	// the frame
-	uniform sampler2D markTex;		// r = 1: a translucent pixel
+	uniform sampler2D markTex;		// r = 1: a translucent pixel; g, b: its polygon's edge (EdgeInfo() in R3DShaderQuads.h)
 
 	out vec4 fragColor;
 
@@ -177,6 +177,31 @@ void R3DFrameBuffers::AllocShader()
 			return vec4(0.0);
 		}
 		return vec4((f.rgb * f.a + b.rgb * b.a * (1.0 - f.a)) / a, a);
+	}
+
+	// a and b mixed (b by w), weighted by their alpha: an edge against nothing
+	// fades out instead of towards black
+	vec4 Mix(vec4 a, vec4 b, float w)
+	{
+		float alpha = mix(a.a, b.a, w);
+		if (alpha <= 0.0) {
+			return vec4(0.0);
+		}
+		return vec4((a.rgb * a.a * (1.0 - w) + b.rgb * b.a * w) / alpha, alpha);
+	}
+
+	// A pixel's edge: the neighbour it points to (dir) and its distance (in pixels), or dir 0
+	void Edge(vec4 mark, out ivec2 dir, out float dist)
+	{
+		dir = ivec2(0);
+		dist = 1.0;
+		if (mark.r > 0.5 || mark.g < 0.25) {
+			return;					// translucent, or no edge near
+		}
+		float off = mark.b * 2.0 - 1.0;
+		int sgn = off < 0.0 ? -1 : 1;
+		dir = mark.g < 0.75 ? ivec2(sgn, 0) : ivec2(0, sgn);
+		dist = abs(off);
 	}
 
 	void main()
@@ -206,9 +231,10 @@ void R3DFrameBuffers::AllocShader()
 			}
 		}
 
+		vec4 res;
 		if (tp) {
 			if (numTranslucent == 0) {
-				fragColor = Over(cp, other / float(max(numOther, 1)));	// over what is behind it
+				res = Over(cp, other / float(max(numOther, 1)));		// over what is behind it
 			}
 			else {
 				// next to a translucent pixel (layers 0 and 1 overlap): opaque, mixed
@@ -216,15 +242,46 @@ void R3DFrameBuffers::AllocShader()
 				bool pIsLayer0 = ((p.x + p.y) & 1) == 0;
 				vec4 l0 = pIsLayer0 ? cp : n;
 				vec4 l1 = pIsLayer0 ? n : cp;
-				fragColor = vec4(mix(l0.rgb, l1.rgb, (l1.a + (1.0 - l0.a)) / 2.0), 1.0);
+				res = vec4(mix(l0.rgb, l1.rgb, (l1.a + (1.0 - l0.a)) / 2.0), 1.0);
 			}
 		}
 		else if (numTranslucent >= 2) {
-			fragColor = Over(translucent / float(numTranslucent), cp);	// behind translucent pixels
+			res = Over(translucent / float(numTranslucent), cp);		// behind translucent pixels
 		}
 		else {
-			fragColor = cp;										// nothing translucent here
+			res = cp;												// nothing translucent here
 		}
+
+		// Edge anti-aliasing, as the Real3D (not for translucency: a pixel the
+		// rules above changed is left as it is, and an edge never blends with a
+		// translucent neighbour; else the surface behind a translucent polygon
+		// shows its edges through it): a polygon's pixel whose edge is
+		// under half a pixel away (dist d) only covers 0.5 + d of it, the rest is
+		// the neighbour across the edge; and an edge between half a pixel and one
+		// pixel from a neighbour's centre covers d - 0.5 of this pixel
+		if (!tp && numTranslucent < 2) {
+			ivec2 dir;
+			float d;
+			Edge(texelFetch(markTex, p, 0), dir, d);
+			ivec2 n = p + dir;
+			if (dir != ivec2(0) && d < 0.5 && all(greaterThanEqual(n, ivec2(0))) && all(lessThan(n, size)) && texelFetch(markTex, n, 0).r < 0.5) {
+				res = Mix(res, texelFetch(colourTex, n, 0), 0.5 - d);
+			}
+			for (int i = 0; i < 4; i++) {
+				ivec2 m = p + offsets[i];
+				if (any(lessThan(m, ivec2(0))) || any(greaterThanEqual(m, size))) {
+					continue;
+				}
+				ivec2 mdir;
+				float md;
+				Edge(texelFetch(markTex, m, 0), mdir, md);
+				if (m + mdir == p && md >= 0.5) {
+					res = Mix(res, texelFetch(colourTex, m, 0), md - 0.5);
+				}
+			}
+		}
+
+		fragColor = res;
 	}
 
 	)glsl";
