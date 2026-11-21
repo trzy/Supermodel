@@ -115,20 +115,12 @@ ivec2 WrapTexCoords(ivec2 pos, ivec2 coordinate, int level)
 
 ivec2 GetTextureSize(int level, ivec2 size)
 {
-	int mipDivisor = 1 << level;
-
-	return size / mipDivisor;
+	return size >> level;
 }
 
 ivec2 GetTexturePosition(int level, ivec2 pos)
 {
-	int mipDivisor = 1 << level;
-
-	ivec2 retPos;
-	retPos.x = pos.x / mipDivisor;
-	retPos.y = pos.y / mipDivisor;
-
-	return retPos;
+	return pos >> level;
 }
 
 ivec2 GetMicroTexturePos(int id)
