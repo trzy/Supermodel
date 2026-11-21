@@ -90,7 +90,7 @@ public:
   // every other pixel of the native 496x384 grid, scaled with the resolution
   // (Moire); or blended 50% with what is behind (Blend)
   enum class Transparency { Original = 0, Moire = 1, Blend = 2 };
-  void SetTransparency(Transparency mode) { m_transparency = mode; }
+  void SetTransparency(Transparency mode);
 
   // Debugging aid: writes the viewable area of the next frame drawn to a BMP file
   void RequestDump(const std::string &file) { m_dumpFile = file; }
