@@ -119,7 +119,10 @@ GLuint R3DFrameBuffers::CreateTexture(int width, int height, GLint format)
 void R3DFrameBuffers::Bind(bool marker)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-	GLenum buffers[] = { GL_COLOR_ATTACHMENT0, marker ? GL_COLOR_ATTACHMENT1 : GL_NONE };
+	GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_NONE };
+	if (marker) {
+		buffers[1] = GL_COLOR_ATTACHMENT1;
+	}
 	glDrawBuffers((GLsizei)std::size(buffers), buffers);
 }
 
