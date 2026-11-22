@@ -480,7 +480,11 @@
 
   <!-- Virtua Racing Extended v0.3 (github.com/ppeltriaux/virtua-racing-extended): vr with the Saturn port's seven
        courses, built locally from the vr set and the European Saturn disc, as vrext.zip. CRCs of a default build:
-       other build options or patch releases will change them. -->
+       other build options or patch releases will change them.
+
+       The build gives its files the names of vr's files. Here, the names have a "vrext-" prefix, because file names
+       must be unique in a parent/clone family: a merged ROM set keeps vr and vrext in one zip file. Supermodel finds
+       files by CRC, thus a zip file with the names from the build also loads. -->
   <game name="vrext" parent="vr">
     <identity>
       <title>Virtua Racing Extended</title>
@@ -500,38 +504,38 @@
     </hardware>
     <roms>
       <region name="rom_main" stride="2" chunk_size="1">
-        <file offset="0" name="epr-14882.14" crc32="0x5C8465DB" />
-        <file offset="1" name="epr-14883.15" crc32="0xFCE51E16" />
+        <file offset="0" name="vrext-epr-14882.14" crc32="0x5C8465DB" />
+        <file offset="1" name="vrext-epr-14883.15" crc32="0xFCE51E16" />
       </region>
       <region name="rom_boot" stride="1" chunk_size="1">
-        <file offset="0x40000" name="epr-14878a.4" crc32="0x8678F78D" />
-        <file offset="0x60000" name="epr-14879a.5" crc32="0x4AECBA14" />
+        <file offset="0x40000" name="vrext-epr-14878a.4" crc32="0x8678F78D" />
+        <file offset="0x60000" name="vrext-epr-14879a.5" crc32="0x4AECBA14" />
       </region>
       <region name="rom_data" stride="2" chunk_size="1">
-        <file offset="0x000000" name="mpr-14880.6" crc32="0xE8A30B04" />
-        <file offset="0x000001" name="mpr-14881.7" crc32="0x99E4F8D2" />
-        <file offset="0x100000" name="mpr-14884.8" crc32="0xEFD48C7A" />
-        <file offset="0x100001" name="mpr-14885.9" crc32="0x95FA1BD1" />
-        <file offset="0x200000" name="mpr-14886.10" crc32="0x4505638C" />
-        <file offset="0x200001" name="mpr-14887.11" crc32="0x6EFA188A" />
-        <file offset="0x300000" name="mpr-14888.12" crc32="0xFE266337" />
-        <file offset="0x300001" name="mpr-14889.13" crc32="0xB131E6FB" />
+        <file offset="0x000000" name="vrext-mpr-14880.6" crc32="0xE8A30B04" />
+        <file offset="0x000001" name="vrext-mpr-14881.7" crc32="0x99E4F8D2" />
+        <file offset="0x100000" name="vrext-mpr-14884.8" crc32="0xEFD48C7A" />
+        <file offset="0x100001" name="vrext-mpr-14885.9" crc32="0x95FA1BD1" />
+        <file offset="0x200000" name="vrext-mpr-14886.10" crc32="0x4505638C" />
+        <file offset="0x200001" name="vrext-mpr-14887.11" crc32="0x6EFA188A" />
+        <file offset="0x300000" name="vrext-mpr-14888.12" crc32="0xFE266337" />
+        <file offset="0x300001" name="vrext-mpr-14889.13" crc32="0xB131E6FB" />
       </region>
       <region name="copro_data" stride="4" chunk_size="1">
-        <file offset="0" name="mpr-14898.39" crc32="0x1C419411" />
-        <file offset="1" name="mpr-14899.40" crc32="0x0B936E73" />
-        <file offset="2" name="mpr-14900.41" crc32="0x2E11115C" />
-        <file offset="3" name="mpr-14901.42" crc32="0x1218EAC7" />
+        <file offset="0" name="vrext-mpr-14898.39" crc32="0x1C419411" />
+        <file offset="1" name="vrext-mpr-14899.40" crc32="0x0B936E73" />
+        <file offset="2" name="vrext-mpr-14900.41" crc32="0x2E11115C" />
+        <file offset="3" name="vrext-mpr-14901.42" crc32="0x1218EAC7" />
       </region>
       <region name="polygons" stride="4" chunk_size="2">
-        <file offset="0x000000" name="mpr-14890.26" crc32="0x41233F25" />
-        <file offset="0x000002" name="mpr-14891.27" crc32="0x0E8F89F6" />
-        <file offset="0x400000" name="mpr-14892.28" crc32="0xDBF3877A" />
-        <file offset="0x400002" name="mpr-14893.29" crc32="0x470209DE" />
-        <file offset="0x800000" name="mpr-14894.30" crc32="0xE19D175C" />
-        <file offset="0x800002" name="mpr-14895.31" crc32="0x1BE3C79B" />
-        <file offset="0xC00000" name="mpr-14896.32" crc32="0x7AAC0314" />
-        <file offset="0xC00002" name="mpr-14897.33" crc32="0x687953B6" />
+        <file offset="0x000000" name="vrext-mpr-14890.26" crc32="0x41233F25" />
+        <file offset="0x000002" name="vrext-mpr-14891.27" crc32="0x0E8F89F6" />
+        <file offset="0x400000" name="vrext-mpr-14892.28" crc32="0xDBF3877A" />
+        <file offset="0x400002" name="vrext-mpr-14893.29" crc32="0x470209DE" />
+        <file offset="0x800000" name="vrext-mpr-14894.30" crc32="0xE19D175C" />
+        <file offset="0x800002" name="vrext-mpr-14895.31" crc32="0x1BE3C79B" />
+        <file offset="0xC00000" name="vrext-mpr-14896.32" crc32="0x7AAC0314" />
+        <file offset="0xC00002" name="vrext-mpr-14897.33" crc32="0x687953B6" />
       </region>
     </roms>
   </game>
