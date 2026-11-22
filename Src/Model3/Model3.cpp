@@ -1450,13 +1450,21 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       //printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
       if ((addr & 0xF) == 0)      // MIDI data port: the USART's transmit buffer
       {
+        // The byte goes to the sound board at once, as before the USART was
+        // emulated: The Lost World sends its 3 byte commands with the sound IRQ
+        // masked, about 100 cycles apart, without waiting for TxRDY, so through
+        // the USART (a byte takes 320 us at 31.25 kbaud) all but the first of
+        // each were lost and it had no sound (ECA lost the odd byte too). The
+        // USART only times the IRQ.
+        SoundBoard.WriteMIDIPort(data);
+
         // TxRDY comes back when the byte moves to the transmit register, a
         // USART clock or so later (MAME's i8251, ported, does it at once): the
         // games' handlers poll until IRQ 0x40 is clear after writing a byte
         // (Scud Race at 1E18, Ski Champ at 99A84), so it stays clear for that
         m_holdSoundIRQ = true;
         m_soundWriteCycle = ppc_total_cycles();
-        m_uart.WriteData(data);
+        m_uart.WriteData(data);   // only for TxRDY's timing: its output is discarded (OnTransmit)
         IRQ.Deassert(0x40);
       }
       else if ((addr & 0xF) == 4) // MIDI control port: the USART's mode/command register
@@ -2836,7 +2844,7 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
     return Result::FAIL;
   if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI,Real3DConfig::Model3(game.stepping))) // same for Real3D DMA interrupt
     return Result::FAIL;
-  m_uart.OnTransmit = [this](uint8_t data) { SoundBoard.WriteMIDIPort(data); };
+  m_uart.OnTransmit = [](uint8_t) {};   // the bytes go to the sound board when written (Write8)
   m_uart.OnTxRdy = [this](bool) { UpdateSoundIRQ(); };
   m_uart.OnRxRdy = [this](bool) { UpdateSoundIRQ(); };
   if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
