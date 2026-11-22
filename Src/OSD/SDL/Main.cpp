@@ -86,6 +86,7 @@
 #include "Util/ConfigBuilders.h"
 #include "OSD/FileSystemPath.h"
 #include "GameLoader.h"
+#include "DATFile.h"
 #include "SDLInputSystem.h"
 #include "SDLIncludes.h"
 #include "Debugger/SupermodelDebugger.h"
@@ -1941,6 +1942,7 @@ static void Help(void)
   puts("  -?, -h, -help, --help   Print this help text");
   puts("  -version, --version     Print the version and quit");
   puts("  -print-games            List supported games and quit");
+  puts("  -output-dat=<file>      Write a DAT file for ROM auditing tools and quit");
   printf("  -game-xml-file=<file>   ROM set definition file [Default: %s]\n", s_gameXMLFilePath.c_str());
   printf("  -log-output=<outputs>   Log output destination(s) [Default: %s]\n", s_logFilePath.c_str());
   puts("  -log-level=<level>      Logging threshold [Default: info]");
@@ -2054,6 +2056,7 @@ struct ParsedCommandLine
   bool error = false;
   bool print_help = false;
   bool print_games = false;
+  std::string output_dat;
   bool print_gl_info = false;
   bool config_inputs = false;
   bool print_inputs = false;
@@ -2196,6 +2199,13 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
         cmd_line.print_help = true;
       else if (arg == "-print-games")
         cmd_line.print_games = true;
+      else if (arg.find("-output-dat=") == 0)
+        cmd_line.output_dat = arg.substr(arg.find('=') + 1);
+      else if (arg == "-output-dat")
+      {
+        ErrorLog("'-output-dat' requires a file name.");
+        cmd_line.error = true;
+      }
       else if (arg == "-res" || arg.find("-res=") == 0)
       {
         std::vector<std::string> parts = Util::Format(arg).Split('=');
@@ -2460,8 +2470,9 @@ int main(int argc, char **argv)
   s_gfxStatePath.assign(cmd_line.gfx_state);
 #endif
   bool print_games = cmd_line.print_games;
+  bool output_dat = !cmd_line.output_dat.empty();
   bool rom_specified = !cmd_line.rom_files.empty();
-  if (!rom_specified && !print_games && !cmd_line.config_inputs && !cmd_line.print_inputs)
+  if (!rom_specified && !print_games && !output_dat && !cmd_line.config_inputs && !cmd_line.print_inputs)
   {
     ErrorLog("No ROM file specified.");
     return 0;
@@ -2479,13 +2490,20 @@ int main(int argc, char **argv)
     Util::Config::FromINIFile(&fileConfig, s_configFilePath);
     Util::Config::MergeINISections(&fileConfigWithDefaults, DefaultConfig(), fileConfig); // apply .ini file's global section over defaults
     Util::Config::MergeINISections(&config3, fileConfigWithDefaults, cmd_line.config);    // apply command line overrides
-    if (rom_specified || print_games)
+    if (rom_specified || print_games || output_dat)
     {
       std::string xml_file = config3["GameXMLFile"].ValueAs<std::string>();
       GameLoader loader(xml_file);
       if (print_games)
       {
         PrintGameList(xml_file, loader.GetGames());
+        return 0;
+      }
+      if (output_dat)
+      {
+        if (WriteDATFile(cmd_line.output_dat, loader))
+          return 1;
+        printf("Wrote %s.\n", cmd_line.output_dat.c_str());
         return 0;
       }
       if (loader.Load(&game, &rom_set, *cmd_line.rom_files.begin()))

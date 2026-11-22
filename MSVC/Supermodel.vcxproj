@@ -320,6 +320,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp" />
     <ClCompile Include="..\Src\Debugger\Watch.cpp" />
     <ClCompile Include="..\Src\GameLoader.cpp" />
+    <ClCompile Include="..\Src\DATFile.cpp" />
     <ClCompile Include="..\Src\Graphics\FBO.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp" />
@@ -518,6 +519,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h" />
     <ClInclude Include="..\Src\Debugger\Watch.h" />
     <ClInclude Include="..\Src\GameLoader.h" />
+    <ClInclude Include="..\Src\DATFile.h" />
     <ClInclude Include="..\Src\Graphics\FBO.h" />
     <ClInclude Include="..\Src\Graphics\IRender3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h" />

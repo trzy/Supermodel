@@ -548,6 +548,9 @@
     <ClCompile Include="..\Src\GameLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\DATFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\ROMSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1016,6 +1019,9 @@
       <Filter>Header Files\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\GameLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\DATFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\ROMSet.h">

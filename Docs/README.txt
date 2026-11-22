@@ -1184,6 +1184,16 @@ not.  All options are case sensitive.
 
     ----------------
 
+    Option:         -output-dat=<file>
+
+    Description:    Writes a DAT file of all supported ROM sets and quits.
+                    ROM auditing tools such as ClrMamePro and RomVault use the
+                    DAT file to check ROM sets and to rebuild them as merged,
+                    split, or non-merged sets.  The file is in the Logiqx XML
+                    format.
+
+    ----------------
+
     Option:         -no-threads
 
     Description:    Disables multi-threading.  When enabled (the default), the
