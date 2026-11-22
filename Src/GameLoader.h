@@ -37,6 +37,7 @@ private:
     typedef std::shared_ptr<File> ptr_t;
     std::string filename;
     uint32_t offset = 0;
+    uint32_t size = 0;
     uint32_t crc32 = 0;
     bool has_crc32 = false;
     static ptr_t Create(const GameLoader &loader, const Util::Config::Node &file_node);
@@ -108,6 +109,7 @@ private:
   static bool MissingAttrib(const GameLoader &loader, const Util::Config::Node &node, const std::string &attribute);
   bool LoadGamesFromXML(const Util::Config::Node &xml);
   bool MergeChildrenWithParents();
+  bool CheckFileNamesInFamilies() const;
   void LogROMDefinition(const std::string &game_name, const RegionsByName_t &regions_by_name) const;
   bool ParseXML(const Util::Config::Node &xml);
   bool LoadDefinitionXML(const std::string &filename);

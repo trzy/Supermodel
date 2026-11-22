@@ -161,10 +161,12 @@ GameLoader::File::ptr_t GameLoader::File::Create(const GameLoader &loader, const
   // ensuring all missing attributes are detected and reported.
   bool missingName = GameLoader::MissingAttrib(loader, file_node, "name");
   bool missingOffset = GameLoader::MissingAttrib(loader, file_node, "offset");
-  if (missingName || missingOffset)
+  bool missingSize = GameLoader::MissingAttrib(loader, file_node, "size");  // ROM auditing tools (DAT files) need it
+  if (missingName || missingOffset || missingSize)
     return ptr_t();
   ptr_t file = std::make_shared<File>();
   file->offset = file_node["offset"].ValueAs<uint32_t>();
+  file->size = file_node["size"].ValueAs<uint32_t>();
   file->filename = Util::ToLower(file_node["name"].ValueAs<std::string>());
   file->has_crc32 = file_node["crc32"].Exists();
   file->crc32 = file->has_crc32 ? file_node["crc32"].ValueAs<uint32_t>() : 0;
@@ -612,6 +614,39 @@ bool GameLoader::MergeChildrenWithParents()
   return error;
 }
 
+// A merged ROM set keeps a parent and its clones in one zip file. Thus, a file
+// name must identify one file in all of the family.
+bool GameLoader::CheckFileNamesInFamilies() const
+{
+  bool error = false;
+  // Parent name -> file name -> first game and file with that name
+  std::map<std::string, std::map<std::string, std::pair<std::string, File::ptr_t>>> files_by_family;
+  for (auto &v1: m_regions_by_game)
+  {
+    const std::string &game_name = v1.first;
+    auto game_it = m_game_info_by_game.find(game_name);
+    if (game_it == m_game_info_by_game.end())
+      continue;
+    const Game &game = game_it->second;
+    auto &files_by_name = files_by_family[IsChildSet(game) ? game.parent : game_name];
+    for (auto &v2: v1.second)
+    {
+      for (auto &file: v2.second->files)
+      {
+        auto it = files_by_name.find(file->filename);
+        if (it == files_by_name.end())
+          files_by_name[file->filename] = { game_name, file };
+        else if (!(*it->second.second == *file))
+        {
+          ErrorLog("%s: File '%s' in '%s' and file '%s' in '%s' are different but have the same name. File names must be unique in a parent/clone family.", m_xml_filename.c_str(), file->filename.c_str(), game_name.c_str(), it->second.second->filename.c_str(), it->second.first.c_str());
+          error = true;
+        }
+      }
+    }
+  }
+  return error;
+}
+
 void GameLoader::LogROMDefinition(const std::string &game_name, const RegionsByName_t &regions_by_name) const
 {
   InfoLog("%s:", game_name.c_str());
@@ -648,6 +683,8 @@ bool GameLoader::ParseXML(const Util::Config::Node &xml)
   {
     ErrorLog("%s: Parent ROM set '%s' also has parent defined, which is not allowed.", m_xml_filename.c_str(), game_name.c_str());
   }
+
+  error |= CheckFileNamesInFamilies();
 
   if (MergeChildrenWithParents())
     return true;
@@ -920,6 +957,11 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
     const ZippedFile *zipped_file = LookupFile(file, zip);
     if (zipped_file)
     {
+      if (zipped_file->uncompressed_size != file->size)
+      {
+        ErrorLog("File '%s' is 0x%x bytes but %s gives 0x%x bytes.", zipped_file->filename.c_str(), zipped_file->uncompressed_size, m_xml_filename.c_str(), file->size);
+        error = true;
+      }
       if (zipped_file->uncompressed_size % region->chunk_size != 0)
       {
         ErrorLog("File '%s' in '%s' is not sized in %d-byte chunks.", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str(), region->chunk_size);
