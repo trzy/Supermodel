@@ -182,7 +182,6 @@ below:
 |  lostwsgp  | The Lost World Aracde (Location Test)   |                       |
 +------------+-----------------------------------------+-----------------------+
 | magtruck   | Magical Truck Adventure (Japan)         |                       |
-|  mgtrkbad  | Magical Truck Adventure (bit rot dump)  |                       |
 +------------+-----------------------------------------+-----------------------+
 | oceanhun   | The Ocean Hunter (Japan, Revision A)    |                       |
 |  oceanhuna | The Ocean Hunter (Japan)                |                       |
