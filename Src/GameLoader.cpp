@@ -50,7 +50,7 @@ bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename)
     if (UNZ_OK != unzGetCurrentFileInfo(zf, &file_info, filename_buffer, sizeof(filename_buffer), NULL, 0, NULL, 0))
       continue;
     zip->files_by_crc[file_info.crc].zf = zf;
-    zip->files_by_crc[file_info.crc].zipfilename = filename_buffer;
+    zip->files_by_crc[file_info.crc].zipfilename = zipfilename;
     zip->files_by_crc[file_info.crc].filename = filename_buffer;
     zip->files_by_crc[file_info.crc].uncompressed_size = file_info.uncompressed_size;
     zip->files_by_crc[file_info.crc].crc32 = file_info.crc;
