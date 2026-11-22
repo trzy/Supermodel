@@ -788,6 +788,57 @@ static void LoadState(IEmulator *Emu, std::string file_path = std::string())
   InfoLog("Loaded state from '%s'.", file_path.c_str());
 }
 
+// Writes the NVRAM settings (country, difficulty, ...) of the config into the
+// game's NVRAM, if they are enabled. Done after the NVRAM is loaded, before the
+// game runs.
+static void ApplyNVRAMSettings(IEmulator *Emu)
+{
+  CModel3 *model3 = dynamic_cast<CModel3 *>(Emu);
+  if (model3 == nullptr || !s_runtime_config["NvramSettings"].ValueAsDefault<bool>(false))
+    return;
+
+  const Game &game = model3->GetGame();
+  NvramSettings::Selection selection;
+  std::string values[unsigned(NvramSettings::Setting::Count)];
+  std::string applied;
+
+  for (unsigned i = 0; i < unsigned(NvramSettings::Setting::Count); i++)
+  {
+    auto setting = NvramSettings::Setting(i);
+    const char *key = NvramSettings::ConfigKey(setting);
+    std::string value = s_runtime_config[key].ValueAsDefault<std::string>(NvramSettings::kKeepValue);
+    if (value.empty() || value == NvramSettings::kKeepValue)
+      continue;
+    if (!NvramSettings::IsValueSupported(&game, setting, value.c_str()))
+    {
+      // e.g. a global country this game doesn't have: it keeps its own
+      InfoLog("NVRAM setting %s = %s does not apply to %s, skipped.", key, value.c_str(), game.name.c_str());
+      continue;
+    }
+    values[i] = value;
+    selection.values[i] = values[i].c_str();
+    applied += (applied.empty() ? "" : ", ") + std::string(key) + " = " + value;
+  }
+
+  if (!selection.HasAny())
+    return;
+
+  bool seeded = false;
+  switch (model3->ApplyNVRAMSettings(selection, &seeded))
+  {
+  case NvramSettings::ApplyResult::Unsupported:
+    InfoLog("NVRAM settings are not supported for %s.", game.name.c_str());
+    break;
+  case NvramSettings::ApplyResult::InvalidLayout:
+    ErrorLog("NVRAM settings not applied: the NVRAM of %s does not hold its settings yet. Run the game once to create them.", game.name.c_str());
+    break;
+  case NvramSettings::ApplyResult::Unchanged:
+  case NvramSettings::ApplyResult::Changed:
+    InfoLog("NVRAM settings applied to %s%s: %s.", game.name.c_str(), seeded ? " (new NVRAM, factory contents)" : "", applied.c_str());
+    break;
+  }
+}
+
 static void SaveNVRAM(IEmulator *Emu)
 {
   CBlockFile  NVRAM;
@@ -972,8 +1023,9 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   // Customized music for games with MPEG boards
   MpegDec::LoadCustomTracks(s_musicXMLFilePath, game);
 
-  // Load NVRAM
+  // Load NVRAM, then write the settings to store in it (country, difficulty, ...)
   LoadNVRAM(Emu);
+  ApplyNVRAMSettings(Emu);
 
   // Set the video mode
   char baseTitleStr[128];
@@ -1685,6 +1737,26 @@ Util::Config::Node DefaultConfig()
   config.Set("PortIn", unsigned(NetProtocol::DEFAULT_PORT), "Network");
   config.Set("PortOut", unsigned(1971), "Network");
   config.Set<std::string>("AddressOut", "127.0.0.1", "Network", "", "");
+
+  // NVRAM settings (Model 3): operator settings written into the game's NVRAM
+  // when it starts, as its Test menu would (see Model3/NvramSettings.h). The
+  // country can be set for all games; the other settings only in a game's own
+  // section. "keep" leaves the value stored by the game.
+  config.Set("NvramSettings", false, "NVRAM");
+  {
+    std::vector<std::string> countries{ NvramSettings::kKeepValue };
+    std::vector<std::string> labels{ "Don't change" };
+    countries.insert(countries.end(), std::begin(NvramSettings::kAllCountries), std::end(NvramSettings::kAllCountries));
+    labels.insert(labels.end(), std::begin(NvramSettings::kAllCountryLabels), std::end(NvramSettings::kAllCountryLabels));
+    config.Set<std::string>(NvramSettings::ConfigKey(NvramSettings::Setting::Country), NvramSettings::kKeepValue, "NVRAM", "", "", countries);
+    SetLabels(NvramSettings::ConfigKey(NvramSettings::Setting::Country), labels);
+  }
+  for (unsigned i = 0; i < unsigned(NvramSettings::Setting::Count); i++)
+  {
+    auto setting = NvramSettings::Setting(i);
+    if (!NvramSettings::IsGlobalSetting(setting))
+      config.Set<std::string>(NvramSettings::ConfigKey(setting), NvramSettings::kKeepValue, "NVRAM", "", "");  // values depend on the game
+  }
 
 #ifdef SUPERMODEL_WIN32
   config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","win","net" });

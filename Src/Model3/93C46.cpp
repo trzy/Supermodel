@@ -232,6 +232,16 @@ void C93C46::Clear(void)
 	memset(regs, 0xFF, sizeof(regs));
 }
 
+void C93C46::GetContents(UINT16 words[64]) const
+{
+	memcpy(words, regs, sizeof(regs));
+}
+
+void C93C46::SetContents(const UINT16 words[64])
+{
+	memcpy(regs, words, sizeof(regs));
+}
+
 void C93C46::Reset(void)
 {
 	receiving = true;

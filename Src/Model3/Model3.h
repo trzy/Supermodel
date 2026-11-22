@@ -45,6 +45,7 @@
 #include "Model3/BillBoard.h"
 #include "CPU/PowerPC/ppc.h"
 #include "Model3/INetBoard.h"
+#include "Model3/NvramSettings.h"
 #include "Network/NetServer.h"
 #include "Util/NewConfig.h"
 #include "Graphics/SuperAA.h"
@@ -98,6 +99,25 @@ public:
   const Game &GetGame(void) const override;
   void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
   Result Init(const Game &game, const ROMSet &rom_set) override;
+
+  /*
+   * ApplyNVRAMSettings(selection, seeded):
+   *
+   * Writes operator settings (country, difficulty, cabinet type, ...) into the
+   * game's NVRAM, as its Test menu would. Call it after the NVRAM is loaded
+   * and before the game runs. A blank EEPROM (no NVRAM file yet) is first
+   * seeded with the game's factory contents, when they are known, so that the
+   * settings can be written before the game's first boot.
+   *
+   * Parameters:
+   *    selection   Values to write (see Model3/NvramSettings.h).
+   *    seeded      Set to true if the blank EEPROM was seeded, else false.
+   *
+   * Returns:
+   *    Unsupported if the game has no NVRAM settings, InvalidLayout if the
+   *    NVRAM does not hold the expected data, else Unchanged or Changed.
+   */
+  NvramSettings::ApplyResult ApplyNVRAMSettings(const NvramSettings::Selection &selection, bool *seeded);
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
 

@@ -65,7 +65,18 @@ public:
 	 * Clears the EEPROM contents by writing all 1's.
 	 */
 	void Clear(void);
-	
+
+	/*
+	 * GetContents(words):
+	 * SetContents(words):
+	 *
+	 * Copy the 64 16-bit words of EEPROM memory out of or into the device,
+	 * e.g. to change the game settings stored there. The device state is not
+	 * modified.
+	 */
+	void GetContents(UINT16 words[64]) const;
+	void SetContents(const UINT16 words[64]);
+
 	/*
 	 * Write(pinCS, pinCLK, pinDI):
 	 *

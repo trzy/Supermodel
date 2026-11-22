@@ -1403,6 +1403,66 @@ All settings are case sensitive.
 
     ----------------
 
+    Name:           NvramSettings
+
+    Argument:       Integer.
+
+    Description:    If set to 1, the Nvram* settings below are written into the
+                    NVRAM of a Model 3 game each time it starts, the way its
+                    Test menu stores them, including settings that the Test
+                    menu only shows after entering an unlock code (like the
+                    country).  The game's checksum is updated so it accepts
+                    them.  If the game has no NVRAM file yet, its NVRAM is
+                    first filled with the contents the game writes on its first
+                    boot.  If set to 0 (the default), NVRAM is left as it is.
+                    In the settings GUI, these are on the NVRAM tab.
+
+    ----------------
+
+    Name:           NvramCountry
+
+    Argument:       String.
+
+    Description:    Machine country: 'japan', 'usa', 'export', 'australia',
+                    'korea' or 'asia'.  Can be set globally: a game that
+                    doesn't have the chosen country keeps its own.  'keep' (the
+                    default) leaves the value stored by the game.
+
+    ----------------
+
+    Name:           NvramDifficulty
+                    NvramLinkMode
+                    NvramLinkId
+                    NvramCabinet
+                    NvramSpecialCar
+                    NvramDisplayType
+                    NvramChristmasMode
+                    NvramVocal
+                    NvramLeverFeedback
+                    NvramDefaultView
+                    NvramCalibration
+
+    Argument:       String.
+
+    Description:    Other settings stored in NVRAM, with values of their own in
+                    each game, so they are set in the game's section only (for
+                    example 'NvramDifficulty = hard' under '[ daytona2 ]').
+                    Which settings a game has, and their values, are listed on
+                    the NVRAM tab of the settings GUI with "Per game settings"
+                    ticked.  NvramLinkId is the car, cabinet, machine or seat
+                    number on a linked network; NvramCalibration ('enabled')
+                    writes known-good analog control calibration for the gun
+                    and Star Wars Trilogy games.  'keep' (the default) leaves
+                    the value stored by the game.  Supported games: Bass
+                    Fishing, Daytona USA 2, Dirt Devils, Emergency Call
+                    Ambulance, Fighting Vipers 2, Harley-Davidson & L.A.
+                    Riders, L.A. Machineguns, Le Mans 24, The Lost World,
+                    Magical Truck Adventure, Ocean Hunter, Scud Race, Ski
+                    Champ, Spikeout, Sega Rally 2, Star Wars Trilogy, Virtua
+                    Fighter 3, Virtual On 2 and Virtua Striker 2.
+
+    ----------------
+
     Name:           ROMDirectory
 
     Argument:       String.

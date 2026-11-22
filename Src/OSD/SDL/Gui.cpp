@@ -44,6 +44,7 @@
 #include "../Src/OSD/SDL/SDLInputSystem.h"
 #include "../Src/Inputs/Inputs.h"
 #include "OSD/ConfigFile.h"
+#include "Model3/NvramSettings.h"
 #include "Main.h"
 #include "Gui.h"
 
@@ -568,6 +569,118 @@ static void CreateControls(Util::Config::Node& config, const std::string& group)
                 }
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// NVRAM tab: operator settings written into a Model 3 game's NVRAM when it starts (see Model3/NvramSettings.h). It is
+// drawn here rather than from the settings' value ranges because most settings have values of their own in each game:
+// the global settings have the toggle and the country, a game's settings have everything that game supports.
+// ---------------------------------------------------------------------------------------------------------------
+
+// Sets one of the GUI's settings, keeping its value range (setting a value replaces it)
+template <typename T>
+static void SetGuiSetting(Util::Config::Node& config, const std::string& key, const T& value)
+{
+    auto range = config[key].GetValue()->GetValueRange();
+    config.Set(key, value);
+    config[key].GetValue()->SetValueRange(range);
+}
+
+// Combo box for an NVRAM setting: "Don't change" and the values (key, label) the setting has
+static void NvramCombo(Util::Config::Node& config, const char* key, const char* label, const char* description, const std::vector<std::pair<std::string, std::string>>& values)
+{
+    const std::string current = config[key].ValueAs<std::string>();
+
+    std::vector<std::string> keys{ NvramSettings::kKeepValue };
+    std::vector<std::string> items{ "Don't change" };
+    for (const auto& v : values) {
+        keys.emplace_back(v.first);
+        items.emplace_back(v.second);
+    }
+
+    int selectedIndex = -1;
+    for (size_t i = 0; i < keys.size(); i++) {
+        if (keys[i] == current) {
+            selectedIndex = (int)i;
+        }
+    }
+    if (selectedIndex < 0) {
+        // e.g. a global country this game doesn't have: the game keeps its own
+        items.emplace_back(current + " (not in this game, not changed)");
+        selectedIndex = (int)keys.size();
+    }
+
+    std::vector<const char*> itemPtrs;
+    for (auto& s : items) {
+        itemPtrs.emplace_back(s.c_str());
+    }
+
+    const std::string id = std::string(label) + "##" + key;
+    if (ImGui::Combo(id.c_str(), &selectedIndex, itemPtrs.data(), (int)itemPtrs.size()) && selectedIndex < (int)keys.size()) {
+        SetGuiSetting(config, key, keys[selectedIndex]);
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s\n(%s)", description, key);
+    }
+}
+
+static void DrawNvramTab(Util::Config::Node& config, const PerGameState& perGame, const Game& selectedGame)
+{
+    ImGui::TextWrapped("Writes operator settings into a Model 3 game's NVRAM each time it starts, the way its Test menu "
+                       "stores them, including ones the Test menu only shows after an unlock code (like the country). "
+                       "\"Don't change\" keeps what the game has stored.");
+    ImGui::Dummy(ScaledSize(0.0f, 5.0f));
+
+    bool enabled = config["NvramSettings"].ValueAs<bool>();
+    if (ImGui::Checkbox("Change NVRAM settings##NvramSettings", &enabled)) {
+        SetGuiSetting(config, "NvramSettings", enabled);
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("(NvramSettings)");
+    }
+
+    if (!enabled) {
+        return;
+    }
+
+    ImGui::Separator();
+
+    const char* countryKey = NvramSettings::ConfigKey(NvramSettings::Setting::Country);
+
+    // global settings: only the country, whose names are the same in every game
+    if (perGame.game.empty()) {
+        std::vector<std::pair<std::string, std::string>> countries;
+        for (size_t i = 0; i < std::size(NvramSettings::kAllCountries); i++) {
+            countries.emplace_back(NvramSettings::kAllCountries[i], NvramSettings::kAllCountryLabels[i]);
+        }
+        NvramCombo(config, countryKey, "Country", "Machine country for every game. A game that doesn't have this country keeps its own.", countries);
+        ImGui::Dummy(ScaledSize(0.0f, 5.0f));
+        ImGui::TextDisabled("Difficulty, link mode, cabinet type and the other settings depend on the game:\n"
+                            "select a game and tick \"Per game settings\" to change them.");
+        return;
+    }
+
+    // a game's settings: everything it supports, with its own values
+    bool any = false;
+    for (unsigned i = 0; i < unsigned(NvramSettings::Setting::Count); i++) {
+
+        const auto setting = NvramSettings::Setting(i);
+        const NvramSettings::SettingInfo* info = NvramSettings::GetSettingInfo(&selectedGame, setting);
+        if (info == nullptr) {
+            continue;
+        }
+
+        std::vector<std::pair<std::string, std::string>> values;
+        for (size_t v = 0; v < info->valueCount; v++) {
+            values.emplace_back(info->values[v].key, info->values[v].label);
+        }
+        NvramCombo(config, NvramSettings::ConfigKey(setting), info->label, info->description, values);
+        any = true;
+    }
+
+    if (!any) {
+        ImGui::TextDisabled("%s has no NVRAM settings.", perGame.title.c_str());
     }
 }
 
@@ -1305,6 +1418,11 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::
             ImGui::EndTabItem();
             inputs = nullptr;
         }
+        if (ImGui::BeginTabItem("NVRAM")) {
+            DrawNvramTab(config, perGame, GetGame(games, selectedGameIndex));
+            ImGui::EndTabItem();
+            inputs = nullptr;
+        }
         if (ImGui::BeginTabItem("Key bindings")) {
 
             if (inputs == nullptr) {
@@ -1533,6 +1651,15 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
         // game-specific sections are preserved by the write
         Util::Config::CopyINISection(&fullConfig, config);
         StorePerGameSettings(perGame, fullConfig, config);
+
+        // NVRAM settings with values of their own in each game are only in the games' sections
+        for (unsigned i = 0; i < unsigned(NvramSettings::Setting::Count); i++) {
+            if (!NvramSettings::IsGlobalSetting(NvramSettings::Setting(i))) {
+                if (Util::Config::Node* n = fullConfig.TryGet(NvramSettings::ConfigKey(NvramSettings::Setting(i)))) {
+                    n->Clear();
+                }
+            }
+        }
         Util::Config::WriteINIFile(configPath, fullConfig, TimestampedConfigFileComment("Updated from GUI."));
     }
 

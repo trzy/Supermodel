@@ -230,6 +230,7 @@
 #include "ROMSet.h"
 #include "Model3/NetBoard.h"
 #include "Model3/SimNetBoard.h"
+#include "Model3/NvramTemplates.h"
 #include "SDLIncludes.h"
 #include "OSD/Audio.h"
 #include "OSD/Video.h"
@@ -2030,6 +2031,26 @@ void CModel3::ClearNVRAM(void)
 {
   memset(backupRAM, 0, 0x20000);
   EEPROM.Clear();
+}
+
+NvramSettings::ApplyResult CModel3::ApplyNVRAMSettings(const NvramSettings::Selection &selection, bool *seeded)
+{
+  UINT16 words[64];
+  EEPROM.GetContents(words);
+
+  // A blank EEPROM (all 1's, as after Clear()) has none of the game's data to
+  // change: start from what the game writes on its first boot
+  bool blank = std::all_of(std::begin(words), std::end(words), [](UINT16 w) { return w == 0xFFFF; });
+  const NvramTemplates::Template *factory = blank ? NvramTemplates::Find(m_game.name) : nullptr;
+  if (factory != nullptr)
+    std::copy(factory->eeprom.begin(), factory->eeprom.end(), words);
+  if (seeded != nullptr)
+    *seeded = factory != nullptr;
+
+  NvramSettings::ApplyResult result = NvramSettings::Apply(m_game, words, backupRAM, 0x20000, selection);
+  if (result == NvramSettings::ApplyResult::Changed || (factory != nullptr && result == NvramSettings::ApplyResult::Unchanged))
+    EEPROM.SetContents(words);
+  return result;
 }
 
 // Milliseconds on a clock that only ever goes forward. For measuring intervals.
