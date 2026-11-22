@@ -1205,7 +1205,54 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
   return error;
 }
 
+std::vector<GameLoader::ROMSetFiles> GameLoader::GetROMSetFiles() const
+{
+  std::vector<std::pair<size_t, ROMSetFiles>> ordered;
+  for (auto &v: m_game_info_by_game)
+  {
+    const Game &game = v.second;
+    // Child sets are merged with their parents
+    const RegionsByName_t *regions = nullptr;
+    auto merged_it = m_regions_by_merged_game.find(game.name);
+    auto it = m_regions_by_game.find(game.name);
+    if (merged_it != m_regions_by_merged_game.end())
+      regions = &merged_it->second;
+    else if (it != m_regions_by_game.end())
+      regions = &it->second;
+    else
+      continue;
+
+    ROMSetFiles rom_set;
+    rom_set.game = &game;
+    // A file can be in more than one region or at more than one offset
+    std::set<std::string> names;
+    for (auto &v2: *regions)
+    {
+      for (auto &file: v2.second->files)
+      {
+        if (!names.insert(file->filename).second)
+          continue;
+        ROMSetFile rom_set_file;
+        rom_set_file.name = file->filename;
+        rom_set_file.size = file->size;
+        rom_set_file.crc32 = file->crc32;
+        rom_set_file.has_crc32 = file->has_crc32;
+        rom_set.files.push_back(rom_set_file);
+      }
+    }
+
+    auto order_it = m_game_order.find(game.name);
+    ordered.emplace_back(order_it != m_game_order.end() ? order_it->second : SIZE_MAX, rom_set);
+  }
+
+  std::stable_sort(ordered.begin(), ordered.end(), [](const auto &a, const auto &b) { return a.first < b.first; });
+  std::vector<ROMSetFiles> rom_sets;
+  for (auto &v: ordered)
+    rom_sets.push_back(v.second);
+  return rom_sets;
+}
+
 GameLoader::GameLoader(const std::string &xml_file)
 {
-  LoadDefinitionXML(xml_file);
+  m_xml_error = LoadDefinitionXML(xml_file);
 }

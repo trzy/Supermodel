@@ -124,12 +124,40 @@ private:
   bool LoadRegion(ROM *buffer, const GameLoader::Region::ptr_t &region, const ZipArchive &zip) const;
   bool LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive &zip) const;
 
+  bool m_xml_error = false;
+
 public:
+  // A file in a ROM set, for tools such as ROM auditors (DAT files)
+  struct ROMSetFile
+  {
+    std::string name;
+    uint32_t size = 0;
+    uint32_t crc32 = 0;
+    bool has_crc32 = false;
+  };
+
+  // A ROM set with all of its files. A clone's files include the files that it
+  // uses from its parent.
+  struct ROMSetFiles
+  {
+    const Game *game = nullptr;
+    std::vector<ROMSetFile> files;
+  };
+
   GameLoader(const std::string &xml_file);
   bool Load(Game *game, ROMSet *rom_set, const std::string &zipfilename) const;
   const std::map<std::string, Game> &GetGames() const
   {
     return m_game_info_by_game;
+  }
+
+  // Returns the ROM sets in the order of the XML file
+  std::vector<ROMSetFiles> GetROMSetFiles() const;
+
+  // True if the XML file could not be loaded or has errors
+  bool HasXMLErrors() const
+  {
+    return m_xml_error;
   }
 };
 
