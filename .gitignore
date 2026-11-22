@@ -373,7 +373,8 @@ saves/
 # Ignore Supermodel package
 pkg/
 
-
+# Ignore AI assistants
+.claude/
 
 
 
