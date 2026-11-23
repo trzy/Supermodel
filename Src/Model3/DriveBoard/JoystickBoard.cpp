@@ -145,8 +145,10 @@ void CJoyBoard::Reset(void)
 
   m_simulated = false;  //TODO: make this run-time configurable when simulation mode is supported
 
-  if (!m_config["ForceFeedback"].ValueAsDefault<bool>(false))
-    Disable();
+  // The joystick board stays attached without force feedback, only the forces
+  // aren't sent to the controller: Star Wars Trilogy waits at boot (WAIT SETUP
+  // THIS FEEDBACK LEVER.) until the board answers, and a disabled one reads FF
+  m_forceFeedback = m_config["ForceFeedback"].ValueAsDefault<bool>(false);
 
   // Stop any effects that may still be playing
   if (!IsDisabled())
@@ -569,8 +571,11 @@ void CJoyBoard::SendStopAll(void)
   ForceFeedbackCmd ffCmd{};
   ffCmd.id = FFStop;
 
-  m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
-  m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+  if (m_forceFeedback)
+  {
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+    m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+  }
 
   m_lastConstForce = 0;
   m_lastSelfCenter = 0;
@@ -606,7 +611,8 @@ void CJoyBoard::SendConstantForce(INT8 val)
   ffCmd.id = FFConstantForce;
   ffCmd.force = (float)val / (val >= 0 ? 127.0f : 128.0f);
 
-  m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+  if (m_forceFeedback)
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
 
   m_lastConstForce = val;
 }
@@ -619,7 +625,8 @@ void CJoyBoard::SendConstantForceY(INT8 val)
   ForceFeedbackCmd ffCmd;
   ffCmd.id = FFConstantForce;
   ffCmd.force = (float)val / (val >= 0 ? 127.0f : 128.0f);
-  m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+  if (m_forceFeedback)
+    m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
   m_lastConstForceY = val;
 }
 
@@ -638,8 +645,11 @@ void CJoyBoard::SendSelfCenter(UINT8 val)
   ffCmd.id = FFSelfCenter;
   ffCmd.force = (float)val / 255.0f;
 
-  m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
-  m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+  if (m_forceFeedback)
+  {
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+    m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+  }
 
   m_lastSelfCenter = val;
 }
@@ -659,7 +669,8 @@ void CJoyBoard::SendFriction(UINT8 val)
   ForceFeedbackCmd ffCmd;
   ffCmd.id = FFFriction;
   ffCmd.force = (float)val / 255.0f;
-  m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+  if (m_forceFeedback)
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
 
   m_lastFriction = val;
 }
@@ -678,7 +689,8 @@ void CJoyBoard::SendVibrate(UINT8 val)
   ForceFeedbackCmd ffCmd;
   ffCmd.id = FFVibrate;
   ffCmd.force = (float)val / 255.0f;
-  m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+  if (m_forceFeedback)
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
 
   m_lastVibrate = val;
 }

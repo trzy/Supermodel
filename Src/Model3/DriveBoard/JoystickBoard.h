@@ -187,6 +187,7 @@ private:
   UINT8 m_lastSelfCenter; // Last self center command sent
   UINT8 m_lastFriction;   // Last friction command sent
   UINT8 m_lastVibrate;    // Last vibrate command sent
+  bool  m_forceFeedback = false;  // ForceFeedback: the forces are sent to the controller (the board answers either way)
 
   UINT8 SimulateRead(void);
 
