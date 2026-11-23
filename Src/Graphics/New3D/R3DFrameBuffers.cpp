@@ -255,14 +255,26 @@ void R3DFrameBuffers::AllocShader()
 			res = cp;												// nothing translucent here
 		}
 
-		// Edge anti-aliasing, as the Real3D (not for translucency: a pixel the
-		// rules above changed is left as it is, and an edge never blends with a
-		// translucent neighbour; else the surface behind a translucent polygon
-		// shows its edges through it): a polygon's pixel whose edge is
+		// a translucent pixel on a diagonal: the checkerboard's other half, so with
+		// one of the four neighbours it says translucency is next to this pixel
+		bool diagTranslucent = false;
+		const ivec2 diagonals[4] = ivec2[](ivec2(-1, -1), ivec2(1, -1), ivec2(-1, 1), ivec2(1, 1));
+		for (int i = 0; i < 4; i++) {
+			ivec2 n = p + diagonals[i];
+			if (all(greaterThanEqual(n, ivec2(0))) && all(lessThan(n, size)) && texelFetch(markTex, n, 0).r > 0.5) {
+				diagTranslucent = true;
+			}
+		}
+
+		// Edge anti-aliasing, as the Real3D: a polygon's pixel whose edge is
 		// under half a pixel away (dist d) only covers 0.5 + d of it, the rest is
 		// the neighbour across the edge; and an edge between half a pixel and one
-		// pixel from a neighbour's centre covers d - 0.5 of this pixel
-		if (!tp && numTranslucent < 2) {
+		// pixel from a neighbour's centre covers d - 0.5 of this pixel.
+		// None next to translucency (any of the 8 pixels around translucent): on
+		// the hardware an opaque polygon's edge in front of a translucent one
+		// isn't anti-aliased, and else the surface behind a translucent polygon
+		// would show its edges through it
+		if (!tp && numTranslucent == 0 && !diagTranslucent) {
 			ivec2 dir;
 			float d;
 			Edge(texelFetch(markTex, p, 0), dir, d);
