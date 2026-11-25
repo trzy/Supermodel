@@ -599,6 +599,15 @@ static std::vector<std::string> SplitByComma(const std::string& input)
     return result;
 }
 
+static std::string JoinByComma(const std::vector<std::string>& list)
+{
+    std::string result;
+    for (size_t i = 0; i < list.size(); i++) {
+        result += (i ? "," : "") + list[i];
+    }
+    return result;
+}
+
 struct KeyBindState
 {
     std::shared_ptr<CInput> input;
@@ -624,20 +633,37 @@ static void BindKeys(Util::Config::Node& config, KeyBindState& kb, bool openPopu
 
     if (ImGui::BeginPopupModal("Key Binding", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
 
-        if (ImGui::BeginTable("ShortcutTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        if (ImGui::BeginTable("ShortcutTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
 
             ImGui::TableSetupColumn("Action");
             ImGui::TableSetupColumn("Keys");
+            ImGui::TableSetupColumn("Invert", ImGuiTableColumnFlags_WidthFixed);
             ImGui::TableHeadersRow();
 
             auto keyList = SplitByComma(kb.input->GetMapping());
+            bool analog = (kb.input->flags & (INPUT_FLAGS_ANALOG | INPUT_FLAGS_AXIS)) != 0;
 
-            for (auto& k : keyList) {
+            for (size_t i = 0; i < keyList.size(); i++) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Text("%s", kb.input->label);
                 ImGui::TableNextColumn();
-                ImGui::Text("%s", k.c_str());
+                ImGui::Text("%s", keyList[i].c_str());
+                ImGui::TableNextColumn();
+
+                // Invert: only for a whole mouse or joystick axis on an analog control (eg JOY1_XAXIS <-> JOY1_XAXIS_INV)
+                bool inverted = false;
+                std::string toggled;
+                bool invertible = analog && CInputSystem::ToggleAxisInversion(keyList[i], inverted, toggled);
+                ImGui::PushID((int)i);
+                ImGui::BeginDisabled(!invertible || kb.waitingForInput);
+                if (ImGui::Checkbox("##Invert", &inverted)) {
+                    keyList[i] = toggled;
+                    kb.input->SetMapping(JoinByComma(keyList).c_str());
+                    kb.input->StoreToConfig(&config);
+                }
+                ImGui::EndDisabled();
+                ImGui::PopID();
             }
 
             ImGui::EndTable();

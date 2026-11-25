@@ -1724,6 +1724,34 @@ CInputSource* CInputSystem::ParseSource(const char *mapping, bool fullAxisOnly)
   return ParseMultiSource(mapping, fullAxisOnly, true);
 }
 
+bool CInputSystem::ToggleAxisInversion(const string& mapping, bool &inverted, string &toggled)
+{
+  int devNum, axisNum, axisDir;
+  const char *name = NULL;
+
+  size_t partIndex = ParseDevMapping(mapping, "MOUSE", devNum);
+  if (partIndex != (size_t)-1)
+  {
+    EMousePart msePart = LookupMousePart(mapping.substr(partIndex));
+    if (!IsFullAxis(msePart) || !GetAxisDetails(msePart, axisNum, axisDir))
+      return false;
+    name = LookupName(GetMouseAxis(axisNum, axisDir == AXIS_FULL ? AXIS_INVERTED : AXIS_FULL));
+  }
+  else if ((partIndex = ParseDevMapping(mapping, "JOY", devNum)) != (size_t)-1)
+  {
+    EJoyPart joyPart = LookupJoyPart(mapping.substr(partIndex));
+    if (!IsFullAxis(joyPart) || !GetAxisDetails(joyPart, axisNum, axisDir))
+      return false;
+    name = LookupName(GetJoyAxis(axisNum, axisDir == AXIS_FULL ? AXIS_INVERTED : AXIS_FULL));
+  }
+  if (name == NULL)
+    return false;
+
+  inverted = axisDir == AXIS_INVERTED;
+  toggled = mapping.substr(0, partIndex) + name;  // keeps the device, eg JOY1_
+  return true;
+}
+
 void CInputSystem::ClearSettings()
 {
   // Delete all key settings

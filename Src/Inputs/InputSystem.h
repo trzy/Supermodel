@@ -945,6 +945,12 @@ public:
   CInputSource* ParseSource(const char *mapping, bool fullAxisOnly = false);
 
   /*
+   * If the given single mapping is a whole mouse or joystick axis (eg JOY1_XAXIS or MOUSE_YAXIS_INV, not JOY1_XAXIS_POS or a
+   * button), returns true, sets inverted to whether it is inverted and toggled to the same axis with the other direction.
+   */
+  static bool ToggleAxisInversion(const std::string& mapping, bool &inverted, std::string &toggled);
+
+  /*
    * Waits for any input from the user and once received copies a mapping configuration representing the input (eg KEY_A or JOY1_AXIS_POS)
    * into the given buffer.
    * Returns true if input was successfully received or false if the user activated the given escape mapping or closed the window.
