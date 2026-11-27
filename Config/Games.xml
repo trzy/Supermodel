@@ -478,13 +478,13 @@
     </roms>
   </game>
 
-  <!-- Virtua Racing Extended v0.3 (github.com/ppeltriaux/virtua-racing-extended): vr with the Saturn port's seven
-       courses, built locally from the vr set and the European Saturn disc, as vrext.zip. CRCs of a default build:
+  <!-- Virtua Racing Extended v0.5 (github.com/ppeltriaux/virtua-racing-extended): vr with the Saturn/PS2 port's seven/three
+       additional courses, built locally from the vr set and the European Saturn/PS2 disc. CRCs of a default build:
        other build options or patch releases will change them. -->
-  <game name="vrext" parent="vr">
+  <game name="vrextsat" parent="vr">
     <identity>
-      <title>Virtua Racing Extended</title>
-      <version>v0.3</version>
+      <title>Virtua Racing Extended: Saturn Tracks</title>
+      <version>v0.5</version>
       <manufacturer>Sega</manufacturer>
       <year>1992</year>
     </identity>
@@ -500,28 +500,37 @@
     </hardware>
     <roms>
       <region name="rom_main" stride="2" chunk_size="1">
-        <file offset="0" name="epr-14882.14" crc32="0x5C8465DB" />
-        <file offset="1" name="epr-14883.15" crc32="0xFCE51E16" />
+        <file offset="0" name="epr-14882.14" crc32="0x696B7146" />
+        <file offset="1" name="epr-14883.15" crc32="0x02F8B3AF" />
       </region>
       <region name="rom_boot" stride="1" chunk_size="1">
-        <file offset="0x40000" name="epr-14878a.4" crc32="0x8678F78D" />
-        <file offset="0x60000" name="epr-14879a.5" crc32="0x4AECBA14" />
+        <file offset="0x40000" name="epr-14878a.4" crc32="0x49AF3025" />
+        <file offset="0x60000" name="epr-14879a.5" crc32="0x862722E0" />
       </region>
       <region name="rom_data" stride="2" chunk_size="1">
-        <file offset="0x000000" name="mpr-14880.6" crc32="0xE8A30B04" />
-        <file offset="0x000001" name="mpr-14881.7" crc32="0x99E4F8D2" />
+        <file offset="0x000000" name="mpr-14880.6" crc32="0x1B068638" />
+        <file offset="0x000001" name="mpr-14881.7" crc32="0x4608136F" />
         <file offset="0x100000" name="mpr-14884.8" crc32="0xEFD48C7A" />
         <file offset="0x100001" name="mpr-14885.9" crc32="0x95FA1BD1" />
         <file offset="0x200000" name="mpr-14886.10" crc32="0x4505638C" />
         <file offset="0x200001" name="mpr-14887.11" crc32="0x6EFA188A" />
-        <file offset="0x300000" name="mpr-14888.12" crc32="0xFE266337" />
-        <file offset="0x300001" name="mpr-14889.13" crc32="0xB131E6FB" />
+        <file offset="0x300000" name="mpr-14888.12" crc32="0xF9BFCFDB" />
+        <file offset="0x300001" name="mpr-14889.13" crc32="0x8F5CE4A6" />
       </region>
       <region name="copro_data" stride="4" chunk_size="1">
         <file offset="0" name="mpr-14898.39" crc32="0x1C419411" />
         <file offset="1" name="mpr-14899.40" crc32="0x0B936E73" />
         <file offset="2" name="mpr-14900.41" crc32="0x2E11115C" />
         <file offset="3" name="mpr-14901.42" crc32="0x1218EAC7" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-14870a.7" crc32="0x8C3E6961" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-14873.32" crc32="0x048048BE" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-14876.4" crc32="0x239C2BEE" />
       </region>
       <region name="polygons" stride="4" chunk_size="2">
         <file offset="0x000000" name="mpr-14890.26" crc32="0x41233F25" />
@@ -530,8 +539,71 @@
         <file offset="0x400002" name="mpr-14893.29" crc32="0x470209DE" />
         <file offset="0x800000" name="mpr-14894.30" crc32="0xE19D175C" />
         <file offset="0x800002" name="mpr-14895.31" crc32="0x1BE3C79B" />
-        <file offset="0xC00000" name="mpr-14896.32" crc32="0x7AAC0314" />
-        <file offset="0xC00002" name="mpr-14897.33" crc32="0x687953B6" />
+        <file offset="0xC00000" name="mpr-14896.32" crc32="0xFC733DFE" />
+        <file offset="0xC00002" name="mpr-14897.33" crc32="0xCF90EC41" />
+      </region>
+    </roms>
+  </game>
+  <game name="vrextps2" parent="vr">
+    <identity>
+      <title>Virtua Racing Extended: PS2 Tracks</title>
+      <version>v0.5</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1992</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="vr4" />
+        <input type="shiftupdown" />
+      </inputs>
+      <netboard>true</netboard>
+    </hardware>
+    <roms>
+      <region name="rom_main" stride="2" chunk_size="1">
+        <file offset="0" name="epr-14882.14" crc32="0x2DEE92A7" />
+        <file offset="1" name="epr-14883.15" crc32="0x4F68F913" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-14878a.4" crc32="0x49AF3025" />
+        <file offset="0x60000" name="epr-14879a.5" crc32="0x821270DF" />
+      </region>
+      <region name="rom_data" stride="2" chunk_size="1">
+        <file offset="0x000000" name="mpr-14880.6" crc32="0xFFEAAB1E" />
+        <file offset="0x000001" name="mpr-14881.7" crc32="0x6FDE96B5" />
+        <file offset="0x100000" name="mpr-14884.8" crc32="0x1CB7090B" />
+        <file offset="0x100001" name="mpr-14885.9" crc32="0x11E8CCBB" />
+        <file offset="0x200000" name="mpr-14886.10" crc32="0xD46C4236" />
+        <file offset="0x200001" name="mpr-14887.11" crc32="0x295057D2" />
+        <file offset="0x300000" name="mpr-14888.12" crc32="0x8D79C697" />
+        <file offset="0x300001" name="mpr-14889.13" crc32="0x8978100E" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="1">
+        <file offset="0" name="mpr-14898.39" crc32="0xFDB7FCD8" />
+        <file offset="1" name="mpr-14899.40" crc32="0x1870E637" />
+        <file offset="2" name="mpr-14900.41" crc32="0x774B7A50" />
+        <file offset="3" name="mpr-14901.42" crc32="0x4575D7E6" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-14870a.7" crc32="0x8C3E6961" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-14873.32" crc32="0x048048BE" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-14876.4" crc32="0x239C2BEE" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-14890.26" crc32="0x154E7E6C" />
+        <file offset="0x000002" name="mpr-14891.27" crc32="0xCC39668F" />
+        <file offset="0x400000" name="mpr-14892.28" crc32="0x671EDCF9" />
+        <file offset="0x400002" name="mpr-14893.29" crc32="0x49396415" />
+        <file offset="0x800000" name="mpr-14894.30" crc32="0x156F5DBD" />
+        <file offset="0x800002" name="mpr-14895.31" crc32="0xB14CB281" />
+        <file offset="0xC00000" name="mpr-14896.32" crc32="0x8A1E8E56" />
+        <file offset="0xC00002" name="mpr-14897.33" crc32="0x91AEDEE2" />
       </region>
     </roms>
   </game>
